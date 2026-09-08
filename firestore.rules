@@ -1,0 +1,242 @@
+﻿rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for Authentication & RBAC Custom Claims
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (getUserRole() == 'SUPER_ADMIN' || getUserRole() == 'OWNER');
+    }
+
+    function isSupervisor() {
+      return isAuthenticated() && (isSuperAdmin() || getUserRole() == 'HR_SUPERVISOR');
+    }
+
+    function isExecutive() {
+      return isAuthenticated() && (isSupervisor() || getUserRole() == 'HR_EXECUTIVE');
+    }
+
+    function isHrIntern() {
+      return isAuthenticated() && (isExecutive() || getUserRole() == 'HR_INTERN');
+    }
+
+    function isHrStaff() {
+      return isAuthenticated() && (getUserRole() in ['SUPER_ADMIN', 'OWNER', 'HR_SUPERVISOR', 'HR_EXECUTIVE', 'HR_INTERN']);
+    }
+
+    function isSelf(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Default deny all unmatched collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users Collection (profiles)
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isHrStaff() || isSelf(userId));
+      // Only Super Admin can update roles; user can update basic profile
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (isSelf(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'customClaims', 'disabled']));
+      allow delete: if false;
+    }
+
+    // Vacancies
+    match /vacancies/{vacancyId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isSupervisor();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Candidates
+    match /candidates/{candidateId} {
+      allow read: if isHrStaff();
+      allow create: if isHrStaff();
+      allow update: if isExecutive() || (isHrIntern() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'archived']));
+      allow delete: if isSuperAdmin();
+    }
+
+    // Applications & Stage History
+    match /applications/{applicationId} {
+      allow read: if isHrStaff();
+      allow create: if isHrStaff();
+      allow update: if isSupervisor() || (isExecutive() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['decision', 'finalScore']));
+      allow delete: if isSuperAdmin();
+
+      match /stageHistory/{historyId} {
+        allow read: if isHrStaff();
+        allow create: if isHrStaff();
+        allow update, delete: if false; // Append-only audit record
+      }
+    }
+
+    // Email Threads & Messages
+    match /emailThreads/{threadId} {
+      allow read: if isHrStaff();
+      allow create, update: if isHrStaff();
+      allow delete: if isSuperAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isHrStaff();
+        allow create: if isHrStaff();
+        allow update: if isExecutive();
+        allow delete: if isSuperAdmin();
+      }
+    }
+
+    // Email Drafts
+    match /emailDrafts/{draftId} {
+      allow read: if isHrStaff();
+      allow create, update: if isHrStaff();
+      allow delete: if isHrStaff();
+    }
+
+    // Interviews
+    match /interviews/{interviewId} {
+      allow read: if isHrStaff();
+      allow create, update: if isHrStaff();
+      allow delete: if isSupervisor();
+    }
+
+    // Candidate Documents (CNIC, Transcripts, Speed Tests)
+    match /candidateDocuments/{docId} {
+      // HR Interns cannot read CNIC or sensitive identity documents
+      allow read: if isSupervisor() || 
+        (isExecutive() && (resource.data.isSensitive == false || resource.data.type != 'CNIC_FRONT' && resource.data.type != 'CNIC_BACK')) ||
+        (isHrIntern() && resource.data.isSensitive == false);
+      allow create: if isHrStaff();
+      allow update: if isSupervisor() || (isExecutive() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'watermarkStatus']));
+      allow delete: if isSuperAdmin();
+    }
+
+    // Onboarding Cases
+    match /onboardingCases/{onboardingId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.userUid == request.auth.uid);
+      allow create: if isExecutive();
+      allow update: if isSupervisor() || (isExecutive() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'completedAt']));
+      allow delete: if isSuperAdmin();
+    }
+
+    // People / Active Intern Directory
+    match /people/{personId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isSupervisor();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Attendance
+    match /attendance/{attendanceId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Client writes can create and update check-in/out for self; corrections require supervisor
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSupervisor() || 
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'CHECKED_IN');
+      allow delete: if isSuperAdmin();
+    }
+
+    // Leave Requests
+    match /leaveRequests/{requestId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSupervisor() || 
+        (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'PENDING');
+      allow delete: if isSuperAdmin();
+    }
+
+    // Work Tasks
+    match /workTasks/{taskId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.assignedTo == request.auth.uid);
+      allow create: if isHrStaff();
+      allow update: if isHrStaff() || (isAuthenticated() && resource.data.assignedTo == request.auth.uid);
+      allow delete: if isSupervisor();
+    }
+
+    // Daily Logs
+    match /dailyLogs/{logId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSupervisor() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isSupervisor();
+    }
+
+    // Weekly Reports
+    match /weeklyReports/{reportId} {
+      allow read: if isHrStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isSupervisor() || (isAuthenticated() && resource.data.userId == request.auth.uid && resource.data.status == 'SUBMITTED');
+      allow delete: if isSupervisor();
+    }
+
+    // Performance Reviews
+    match /performanceReviews/{reviewId} {
+      // Non-HR team members can only read non-private feedback
+      allow read: if isSupervisor() || 
+        (isAuthenticated() && resource.data.personId == request.auth.uid && resource.data.isSharedWithEmployee == true);
+      allow create, update: if isSupervisor();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Offboarding Cases
+    match /offboardingCases/{offboardingId} {
+      allow read: if isSupervisor();
+      allow create, update: if isSupervisor();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Email Templates
+    match /emailTemplates/{templateId} {
+      allow read: if isHrStaff();
+      allow create, update, delete: if isSupervisor();
+    }
+
+    // AI Generations
+    match /aiGenerations/{generationId} {
+      allow read: if isHrStaff();
+      allow create: if isHrStaff();
+      allow update, delete: if false;
+    }
+
+    // System Settings
+    match /systemSettings/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Mail Sync State (internal state)
+    match /mailSyncState/{mailboxId} {
+      allow read: if isSupervisor();
+      allow write: if isSuperAdmin();
+    }
+
+    // Import Jobs & Duplicate Review
+    match /importJobs/{importId} {
+      allow read, write: if isSupervisor();
+    }
+
+    match /duplicateReview/{reviewId} {
+      allow read, write: if isSupervisor();
+    }
+
+    // Audit Logs - Client CANNOT write directly!
+    match /auditLogs/{auditId} {
+      allow read: if isSuperAdmin();
+      allow write: if false; // Only Cloud Functions / Admin SDK can write
+    }
+  }
+}

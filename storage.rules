@@ -1,0 +1,60 @@
+﻿rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (request.auth.token.role == 'SUPER_ADMIN' || request.auth.token.role == 'OWNER');
+    }
+
+    function isSupervisor() {
+      return isAuthenticated() && (isSuperAdmin() || request.auth.token.role == 'HR_SUPERVISOR');
+    }
+
+    function isExecutive() {
+      return isAuthenticated() && (isSupervisor() || request.auth.token.role == 'HR_EXECUTIVE');
+    }
+
+    function isHrStaff() {
+      return isAuthenticated() && (request.auth.token.role in ['SUPER_ADMIN', 'OWNER', 'HR_SUPERVISOR', 'HR_EXECUTIVE', 'HR_INTERN']);
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Candidate Sensitive Documents (CNIC, Transcripts, Proofs)
+    match /candidate-docs/{candidateId}/{fileName} {
+      // CNIC files can only be accessed by Super Admin or Supervisor
+      allow read: if isSupervisor() || 
+        (isExecutive() && !fileName.matches('.*(cnic|CNIC|identity).*'));
+      allow write: if isHrStaff() && 
+        request.resource.size < 15 * 1024 * 1024 && // 15MB limit
+        request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    // Email Attachments (downloaded/saved from candidate emails)
+    match /email-attachments/{threadId}/{fileName} {
+      allow read: if isHrStaff();
+      allow write: if isHrStaff() && request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // Profile photos
+    match /avatars/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isSupervisor()) &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Policy documents & templates
+    match /policies/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isSupervisor() && request.resource.size < 20 * 1024 * 1024;
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { collection, getDocs, doc, setDoc, getDoc, serverTimestamp } from 'fireb
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { createInternalUser, updateUserRole, disableInternalUser } from '../../services/api';
+import { approveUserRequest, rejectUserRequest } from '../../services/mock/auth';
 import { UserRole, UserProfile } from '../../types/auth';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
@@ -18,7 +19,11 @@ import {
   Lock,
   Clock,
   CheckCircle2,
-  Calendar
+  Calendar,
+  AlertCircle,
+  Check,
+  X,
+  ShieldCheck
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -30,6 +35,7 @@ export const SettingsPage: React.FC = () => {
     companyName: 'Pile & Loop',
     timezone: 'Asia/Karachi',
     hrEmail: 'hr@pileandloop.com',
+    superAdminEmail: 'pileandloop@gmail.com',
     interviewBookingUrl: 'https://calendar.google.com/calendar/u/0/appointments/schedules/pileandloop',
     defaultFollowUpLimit: 2,
     defaultDurationMonths: 4,
@@ -42,6 +48,8 @@ export const SettingsPage: React.FC = () => {
 
   const [savingSettings, setSavingSettings] = useState(false);
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
   const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Add User Modal
@@ -72,8 +80,31 @@ export const SettingsPage: React.FC = () => {
   const loadUsers = async () => {
     setLoadingUsers(true);
     try {
-      const snap = await getDocs(collection(db, 'users'));
-      setUsersList(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)));
+      const peopleSnap = await getDocs(collection(db, 'people'));
+      setUsersList(peopleSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          uid: d.id,
+          displayName: data.fullName || data.displayName || 'Team Member',
+          email: data.email,
+          role: data.role || 'TEAM_MEMBER',
+          department: data.department || 'General',
+          disabled: data.status === 'INACTIVE'
+        } as UserProfile;
+      }));
+
+      const reqSnap = await getDocs(collection(db, 'userRequests'));
+      const pending = reqSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter((r: any) => r.status === 'PENDING');
+      setPendingRequests(pending);
+
+      // Initialize selected roles for pending requests
+      const initialRoles: Record<string, string> = {};
+      pending.forEach((r: any) => {
+        initialRoles[r.id] = r.requestedRole || 'TEAM_MEMBER';
+      });
+      setSelectedRoles(initialRoles);
     } finally {
       setLoadingUsers(false);
     }
@@ -121,52 +152,94 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleToggleDisabled = async (targetUid: string, currentDisabled: boolean) => {
+  const handleToggleDisabled = async (targetUid: string, currentlyDisabled: boolean) => {
     try {
-      await disableInternalUser(targetUid, !currentDisabled);
+      await disableInternalUser(targetUid, !currentlyDisabled);
       loadUsers();
     } catch (err: any) {
-      alert(err.message || 'Toggle disabled failed');
+      alert(err.message || 'Action failed');
+    }
+  };
+
+  const handleApproveRequest = async (reqId: string) => {
+    const roleToAllocate = selectedRoles[reqId] || 'TEAM_MEMBER';
+    try {
+      await approveUserRequest(reqId, roleToAllocate);
+      alert(`User approved and allocated the role: ${roleToAllocate}`);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Approval failed');
+    }
+  };
+
+  const handleRejectRequest = async (reqId: string) => {
+    if (!window.confirm('Are you sure you want to reject this access request?')) return;
+    try {
+      await rejectUserRequest(reqId);
+      loadUsers();
+    } catch (err: any) {
+      alert(err.message || 'Rejection failed');
     }
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-900">System Settings & RBAC Administration</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Configure operational policies, Google Gemini AI parameters, and manage team accounts
-        </p>
+        <h1 className="text-xl font-bold text-slate-900">System Settings & Governance</h1>
+        <p className="text-xs text-slate-500">Configure business logic, working schedules, email integrations, and user access roles.</p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 flex space-x-6 text-xs font-medium overflow-x-auto">
-        {[
-          { id: 'COMPANY', label: 'Company & Timezone' },
-          { id: 'RECRUITMENT', label: 'Recruitment & Booking' },
-          { id: 'INTERNSHIP', label: 'Internship Policy' },
-          { id: 'EMAIL', label: 'cPanel Email Sync' },
-          { id: 'AI', label: 'Gemini AI Assistant' },
-          ...(isSuperAdmin ? [{ id: 'USERS', label: 'User Roles & Access (Super Admin)' }] : []),
-        ].map((tab) => (
+      <div className="flex border-b border-slate-200 text-xs font-medium text-slate-500 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('COMPANY')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'COMPANY' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Building className="w-3.5 h-3.5" /> Company & General
+        </button>
+        <button
+          onClick={() => setActiveTab('RECRUITMENT')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'RECRUITMENT' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Clock className="w-3.5 h-3.5" /> Recruitment & Scheduling
+        </button>
+        <button
+          onClick={() => setActiveTab('INTERNSHIP')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'INTERNSHIP' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Calendar className="w-3.5 h-3.5" /> Internship Standards
+        </button>
+        <button
+          onClick={() => setActiveTab('EMAIL')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'EMAIL' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Mail className="w-3.5 h-3.5" /> cPanel Mail Config
+        </button>
+        <button
+          onClick={() => setActiveTab('AI')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'AI' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Sparkles className="w-3.5 h-3.5" /> AI Copilot & Prompts
+        </button>
+        {isSuperAdmin && (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-2.5 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'border-sky-600 text-sky-600 font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            onClick={() => setActiveTab('USERS')}
+            className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'USERS' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
           >
-            {tab.label}
+            <Shield className="w-3.5 h-3.5" /> User Access & Roles
+            {pendingRequests.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
+                {pendingRequests.length}
+              </span>
+            )}
           </button>
-        ))}
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-2xs">
-        {/* COMPANY */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        {/* COMPANY SETTINGS */}
         {activeTab === 'COMPANY' && (
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs max-w-md">
+          <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl text-xs">
             <div>
               <label className="block text-slate-700 font-medium mb-1">Company Name</label>
               <input
@@ -176,96 +249,93 @@ export const SettingsPage: React.FC = () => {
                 className="w-full p-2 border rounded"
               />
             </div>
-
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Standard System Timezone</label>
-              <input
-                type="text"
-                disabled
-                value="Asia/Karachi (PKT UTC+5)"
-                className="w-full p-2 border rounded bg-slate-100 font-mono text-slate-600"
-              />
-            </div>
-
             <div>
               <label className="block text-slate-700 font-medium mb-1">Primary HR Mailbox</label>
               <input
-                type="text"
+                type="email"
                 value={settings.hrEmail}
                 onChange={(e) => setSettings({ ...settings, hrEmail: e.target.value })}
-                className="w-full p-2 border rounded font-mono"
+                className="w-full p-2 border rounded"
               />
             </div>
-
-            <Button size="sm" type="submit" loading={savingSettings}>Save Company Settings</Button>
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Authoritative Timezone</label>
+              <input
+                type="text"
+                disabled
+                value={settings.timezone}
+                className="w-full p-2 border rounded bg-slate-50 text-slate-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Locked to Asia/Karachi (PKT) for all attendance and pipeline timelines.</p>
+            </div>
+            <Button size="sm" type="submit" loading={savingSettings}>Save Changes</Button>
           </form>
         )}
 
-        {/* RECRUITMENT */}
+        {/* RECRUITMENT SETTINGS */}
         {activeTab === 'RECRUITMENT' && (
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs max-w-lg">
+          <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl text-xs">
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Maximum Follow-Ups per Candidate</label>
+              <label className="block text-slate-700 font-medium mb-1">Google Calendar Interview Scheduling Link</label>
+              <input
+                type="url"
+                value={settings.interviewBookingUrl}
+                onChange={(e) => setSettings({ ...settings, interviewBookingUrl: e.target.value })}
+                placeholder="https://calendar.google.com/calendar/appointments/..."
+                className="w-full p-2 border rounded font-mono text-[11px]"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Sent automatically to candidates in the Interviewing stage.</p>
+            </div>
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Maximum Candidate Follow-Up Limit</label>
               <input
                 type="number"
-                min="1"
-                max="3"
+                min={1}
+                max={5}
                 value={settings.defaultFollowUpLimit}
                 onChange={(e) => setSettings({ ...settings, defaultFollowUpLimit: Number(e.target.value) })}
                 className="w-full p-2 border rounded"
               />
-              <span className="text-[10px] text-slate-400">Strictly enforced at maximum 2 follow-ups by policy.</span>
             </div>
-
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Google Booking Link (Interview Invitations)</label>
-              <input
-                type="text"
-                value={settings.interviewBookingUrl}
-                onChange={(e) => setSettings({ ...settings, interviewBookingUrl: e.target.value })}
-                className="w-full p-2 border rounded font-mono"
-              />
-            </div>
-
             <Button size="sm" type="submit" loading={savingSettings}>Save Recruitment Settings</Button>
           </form>
         )}
 
-        {/* INTERNSHIP */}
+        {/* INTERNSHIP SETTINGS */}
         {activeTab === 'INTERNSHIP' && (
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs max-w-md">
+          <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl text-xs">
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Default Duration (Months)</label>
+              <label className="block text-slate-700 font-medium mb-1">Standard Internship Duration (Months)</label>
               <input
                 type="number"
+                min={1}
+                max={12}
                 value={settings.defaultDurationMonths}
                 onChange={(e) => setSettings({ ...settings, defaultDurationMonths: Number(e.target.value) })}
                 className="w-full p-2 border rounded"
               />
             </div>
-
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Expected Productive Hours / Day</label>
+              <label className="block text-slate-700 font-medium mb-1">Daily Minimum Working Hours</label>
               <input
                 type="number"
+                step="0.5"
                 value={settings.expectedHoursPerDay}
                 onChange={(e) => setSettings({ ...settings, expectedHoursPerDay: Number(e.target.value) })}
                 className="w-full p-2 border rounded"
               />
             </div>
-
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Core Operational Window</label>
+              <label className="block text-slate-700 font-medium mb-1">Core Working Hours (PKT)</label>
               <input
                 type="text"
                 value={settings.coreHours}
                 onChange={(e) => setSettings({ ...settings, coreHours: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded font-mono"
               />
             </div>
-
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Leave Allowance (Days per Month)</label>
+              <label className="block text-slate-700 font-medium mb-1">Monthly Leave Allowance (Days)</label>
               <input
                 type="number"
                 value={settings.leaveAllowanceDaysPerMonth}
@@ -273,57 +343,36 @@ export const SettingsPage: React.FC = () => {
                 className="w-full p-2 border rounded"
               />
             </div>
-
-            <Button size="sm" type="submit" loading={savingSettings}>Save Internship Policy</Button>
+            <Button size="sm" type="submit" loading={savingSettings}>Save Internship Standards</Button>
           </form>
         )}
 
-        {/* EMAIL */}
+        {/* EMAIL SETTINGS */}
         {activeTab === 'EMAIL' && (
-          <div className="space-y-4 text-xs max-w-lg">
-            <div className="p-3 bg-slate-50 border rounded-lg space-y-1">
-              <span className="font-semibold text-slate-800">cPanel IMAP / SMTP Security Architecture</span>
-              <p className="text-slate-500">
-                Mail credentials are stored securely in Google Cloud Secret Manager and accessed exclusively via Cloud Functions. Passwords are never committed or rendered on clients.
+          <div className="space-y-4 max-w-xl text-xs">
+            <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-sky-900">
+              <p className="font-semibold">cPanel Server Mail Synchronization</p>
+              <p className="text-[11px] text-sky-700 mt-0.5">
+                Target mailbox: <strong>hr@pileandloop.com</strong> on host <strong>mail.pileandloop.com</strong>.
               </p>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between p-2.5 border rounded">
-                <span>IMAP Host</span>
-                <span className="font-mono text-slate-700">mail.pileandloop.com:993 (SSL)</span>
-              </div>
-              <div className="flex justify-between p-2.5 border rounded">
-                <span>SMTP Host</span>
-                <span className="font-mono text-slate-700">mail.pileandloop.com:465 (SSL)</span>
-              </div>
-              <div className="flex justify-between p-2.5 border rounded">
-                <span>Mailbox Account</span>
-                <span className="font-mono text-slate-700">hr@pileandloop.com</span>
-              </div>
-              <div className="flex justify-between p-2.5 border rounded">
-                <span>Sync Interval</span>
-                <span className="font-mono text-slate-700">Every 5 Minutes (Cloud Scheduler)</span>
-              </div>
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Scheduled Sync Interval</label>
+              <input
+                type="text"
+                disabled
+                value="Every 5 minutes (Automated cron)"
+                className="w-full p-2 border rounded bg-slate-50 text-slate-500 font-mono"
+              />
             </div>
           </div>
         )}
 
-        {/* AI */}
+        {/* AI SETTINGS */}
         {activeTab === 'AI' && (
-          <form onSubmit={handleSaveSettings} className="space-y-4 text-xs max-w-lg">
-            <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg space-y-1 text-sky-900">
-              <span className="font-semibold flex items-center">
-                <Sparkles className="w-3.5 h-3.5 mr-1" />
-                Prompt Injection Defense & Human-in-the-Loop Safeguard:
-              </span>
-              <p className="text-[11px]">
-                Applicant messages are strictly isolated as untrusted data. Gemini AI never auto-sends emails or modifies candidate stages without explicit HR review and action.
-              </p>
-            </div>
-
+          <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl text-xs">
             <div>
-              <label className="block text-slate-700 font-medium mb-1">Model Selection</label>
+              <label className="block text-slate-700 font-medium mb-1">Gemini Model Selection</label>
               <select
                 value={settings.aiModel}
                 onChange={(e) => setSettings({ ...settings, aiModel: e.target.value })}
@@ -333,79 +382,179 @@ export const SettingsPage: React.FC = () => {
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
               </select>
             </div>
-
             <Button size="sm" type="submit" loading={savingSettings}>Save AI Configuration</Button>
           </form>
         )}
 
-        {/* USERS (SUPER ADMIN ONLY) */}
+        {/* USERS & ACCESS REQUESTS (SUPER ADMIN ONLY) */}
         {activeTab === 'USERS' && isSuperAdmin && (
-          <div className="space-y-4 text-xs">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900">Internal Accounts & RBAC Roles</h3>
+          <div className="space-y-6 text-xs">
+            
+            {/* Super Admin Status Card */}
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-sky-600 flex items-center justify-center text-white">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sky-950">Super Admin / System Owner</h4>
+                  <p className="text-[11px] text-sky-800">
+                    Logged in as <strong>pileandloop@gmail.com</strong>. You hold root authority to approve access requests and allocate RBAC roles.
+                  </p>
+                </div>
+              </div>
               <Button size="sm" onClick={() => setAddUserModalOpen(true)}>
                 <UserPlus className="w-3.5 h-3.5 mr-1" />
-                Create Internal Account
+                Create Account Manually
               </Button>
             </div>
 
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                  <tr>
-                    <th className="p-3">User</th>
-                    <th className="p-3">Role</th>
-                    <th className="p-3">Department</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {usersList.map((u) => (
-                    <tr key={u.uid} className="hover:bg-slate-50">
-                      <td className="p-3">
-                        <span className="font-semibold text-slate-900 block">{u.displayName}</span>
-                        <span className="text-[11px] font-mono text-slate-400">{u.email}</span>
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
-                          className="p-1 border rounded bg-white font-mono text-[11px]"
-                        >
-                          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                          <option value="HR_SUPERVISOR">HR_SUPERVISOR</option>
-                          <option value="HR_EXECUTIVE">HR_EXECUTIVE</option>
-                          <option value="HR_INTERN">HR_INTERN</option>
-                          <option value="TEAM_MEMBER">TEAM_MEMBER</option>
-                        </select>
-                      </td>
-                      <td className="p-3 text-slate-600">{u.department || 'HR'}</td>
-                      <td className="p-3">
-                        <Badge variant={u.disabled ? 'danger' : 'success'}>
-                          {u.disabled ? 'Disabled' : 'Active'}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleDisabled(u.uid, !!u.disabled)}
-                        >
-                          {u.disabled ? 'Enable' : 'Disable'}
-                        </Button>
-                      </td>
+            {/* PENDING ACCESS REQUESTS QUEUE */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">Pending Sign-Up Requests</h3>
+                  {pendingRequests.length > 0 ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-semibold border border-amber-200">
+                      {pendingRequests.length} Pending Review
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold border border-emerald-200">
+                      All Caught Up
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {pendingRequests.length === 0 ? (
+                <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-slate-400">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                  <p className="font-medium text-slate-600">No pending sign-up requests</p>
+                  <p className="text-[11px] mt-0.5">When new team members submit registration requests from the login page, they will appear here for role allocation.</p>
+                </div>
+              ) : (
+                <div className="border border-amber-200 bg-amber-50/40 rounded-xl overflow-hidden shadow-sm">
+                  <table className="w-full text-left">
+                    <thead className="bg-amber-100/70 border-b border-amber-200 text-amber-900 font-semibold">
+                      <tr>
+                        <th className="p-3">Applicant</th>
+                        <th className="p-3">Department & Reason</th>
+                        <th className="p-3">Allocate RBAC Role</th>
+                        <th className="p-3 text-right">Approval Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 bg-white">
+                      {pendingRequests.map((req) => (
+                        <tr key={req.id} className="hover:bg-amber-50/50">
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900 block">{req.fullName}</span>
+                            <span className="text-[11px] font-mono text-slate-500">{req.email}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-semibold text-slate-700 block">{req.department}</span>
+                            <span className="text-[11px] text-slate-500 italic">{req.reason || 'No description provided'}</span>
+                          </td>
+                          <td className="p-3">
+                            <select
+                              value={selectedRoles[req.id] || req.requestedRole || 'TEAM_MEMBER'}
+                              onChange={(e) => setSelectedRoles({ ...selectedRoles, [req.id]: e.target.value })}
+                              className="p-1.5 border border-slate-300 rounded bg-white font-semibold text-xs text-slate-800 shadow-sm focus:ring-2 focus:ring-sky-500"
+                            >
+                              <option value="TEAM_MEMBER">TEAM_MEMBER (Self-service & Attendance)</option>
+                              <option value="HR_INTERN">HR_INTERN (Recruitment & Sourcing)</option>
+                              <option value="HR_EXECUTIVE">HR_EXECUTIVE (Interviews & Drafting)</option>
+                              <option value="HR_SUPERVISOR">HR_SUPERVISOR (Approvals & Offboarding)</option>
+                              <option value="SUPER_ADMIN">SUPER_ADMIN (Full Governance)</option>
+                            </select>
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleApproveRequest(req.id)}
+                                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium text-xs flex items-center gap-1 shadow-sm transition"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                Approve & Allocate
+                              </button>
+                              <button
+                                onClick={() => handleRejectRequest(req.id)}
+                                className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded font-medium text-xs flex items-center gap-1 border border-red-200 transition"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* ACTIVE INTERNAL ACCOUNTS TABLE */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900">Active Internal Accounts ({usersList.length})</h3>
+
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                    <tr>
+                      <th className="p-3">User</th>
+                      <th className="p-3">Role</th>
+                      <th className="p-3">Department</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {usersList.map((u) => (
+                      <tr key={u.uid} className="hover:bg-slate-50">
+                        <td className="p-3">
+                          <span className="font-semibold text-slate-900 block">{u.displayName}</span>
+                          <span className="text-[11px] font-mono text-slate-400">{u.email}</span>
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u.uid, e.target.value as UserRole)}
+                            className="p-1 border rounded bg-white font-mono text-[11px]"
+                          >
+                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                            <option value="HR_SUPERVISOR">HR_SUPERVISOR</option>
+                            <option value="HR_EXECUTIVE">HR_EXECUTIVE</option>
+                            <option value="HR_INTERN">HR_INTERN</option>
+                            <option value="TEAM_MEMBER">TEAM_MEMBER</option>
+                          </select>
+                        </td>
+                        <td className="p-3 text-slate-600">{u.department || 'HR'}</td>
+                        <td className="p-3">
+                          <Badge variant={u.disabled ? 'danger' : 'success'}>
+                            {u.disabled ? 'Disabled' : 'Active'}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleToggleDisabled(u.uid, !!u.disabled)}
+                          >
+                            {u.disabled ? 'Enable' : 'Disable'}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* Add User Modal */}
-      <Modal isOpen={addUserModalOpen} onClose={() => setAddUserModalOpen(false)} title="Create Internal Account (Firebase Auth + RBAC)" maxWidth="md">
+      <Modal isOpen={addUserModalOpen} onClose={() => setAddUserModalOpen(false)} title="Create Internal Account (RBAC)" maxWidth="md">
         <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
           <div>
             <label className="block text-slate-700 font-medium mb-1">Full Name *</label>
@@ -418,7 +567,7 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-slate-700 font-medium mb-1">Temporary Password *</label>
+            <label className="block text-slate-700 font-medium mb-1">Password *</label>
             <input type="password" required minLength={6} value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} placeholder="????????" className="w-full p-2 border rounded" />
           </div>
 

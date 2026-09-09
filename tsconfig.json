@@ -17,7 +17,12 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "firebase/app": ["src/services/mock/app.ts"],
+      "firebase/auth": ["src/services/mock/auth.ts"],
+      "firebase/firestore": ["src/services/mock/firestore.ts"],
+      "firebase/storage": ["src/services/mock/storage.ts"],
+      "firebase/functions": ["src/services/mock/functions.ts"]
     }
   },
   "include": ["src"],

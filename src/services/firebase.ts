@@ -1,8 +1,8 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { getFunctions } from 'firebase/functions';
+export * from './store';
+export { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setMockUser } from './mock/auth';
+export { getStorage, ref, uploadBytesResumable, getDownloadURL } from './mock/storage';
+export { getFunctions, httpsCallable } from './mock/functions';
+export { initializeApp } from './mock/app';
 
 export const firebaseConfig = {
   apiKey: "AIzaSyBeDVhbia9hYdO7qQlDxTMv4oFupjMd4aQ",
@@ -14,8 +14,8 @@ export const firebaseConfig = {
   measurementId: "G-4CNH4CKNY9"
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const functions = getFunctions(app, 'us-central1');
+export const app = { name: 'pile-and-loop-hros' };
+export const auth = { currentUser: null };
+export const db = { type: 'persistent-store' };
+export const storage = { type: 'persistent-storage' };
+export const functions = { type: 'mock-functions' };

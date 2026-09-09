@@ -7,6 +7,7 @@ import { OnboardingCase, DocumentChecklistItem } from '../../types/onboarding';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
+import { CnicWatermarkModal } from '../common/CnicWatermarkModal';
 import {
   UserCheck,
   FileCheck,
@@ -34,6 +35,8 @@ export const OnboardingList: React.FC = () => {
   const [watermarkStatus, setWatermarkStatus] = useState<string>('VERIFIED');
   const [reviewNotes, setReviewNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [cnicModalOpen, setCnicModalOpen] = useState(false);
+  const [cnicTargetName, setCnicTargetName] = useState('Intern / Team Member');
 
   const loadOnboardingCases = async () => {
     setLoading(true);
@@ -108,11 +111,25 @@ export const OnboardingList: React.FC = () => {
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Onboarding Cases & Document Verification</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Verify required documents (CNIC, Transcripts, Speed Tests, Specs, Agreement) and complete employee provisioning
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Onboarding Cases & Document Verification</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Verify required documents (CNIC, Transcripts, Speed Tests, Specs, Agreement) and complete employee provisioning
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setCnicTargetName('Candidate');
+            setCnicModalOpen(true);
+          }}
+          className="border-sky-300 text-sky-700 bg-sky-50 hover:bg-sky-100"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 mr-1 text-sky-600" />
+          Watermark CNIC Tool
+        </Button>
       </div>
 
       {cases.length === 0 ? (
@@ -240,6 +257,28 @@ export const OnboardingList: React.FC = () => {
               )}
             </div>
 
+            {/* CNIC Specific Watermark Stamping Quick Button */}
+            {(selectedDoc.type === 'CNIC_FRONT' || selectedDoc.type === 'CNIC_BACK') && (
+              <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sky-900 text-[11px]">Government CNIC Protection</p>
+                  <p className="text-[10px] text-sky-700">Stamp company purpose and date watermark to protect identity scan.</p>
+                </div>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    setCnicTargetName(selectedCase?.candidateName || 'Candidate');
+                    setCnicModalOpen(true);
+                  }}
+                  className="bg-sky-600 hover:bg-sky-700 text-white"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1" />
+                  Open Watermark Tool
+                </Button>
+              </div>
+            )}
+
             <div>
               <label className="block font-medium text-slate-700 mb-1">Verification Status</label>
               <select
@@ -290,6 +329,14 @@ export const OnboardingList: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* CNIC Security Watermark Tool Modal */}
+      <CnicWatermarkModal
+        isOpen={cnicModalOpen}
+        onClose={() => setCnicModalOpen(false)}
+        personName={cnicTargetName}
+        onSaveWatermarked={() => setWatermarkStatus('VERIFIED')}
+      />
     </div>
   );
 };

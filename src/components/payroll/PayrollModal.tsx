@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { Calculator, DollarSign, Download, Printer, CheckCircle2, Building, Calendar } from 'lucide-react';
 
 interface PayrollModalProps {
@@ -20,6 +21,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
   role,
   baseStipend = 35000
 }) => {
+  const { company, formatCurrency } = useCompanyProfile();
   const [month, setMonth] = useState('September 2026');
   const [totalWorkingDays, setTotalWorkingDays] = useState(22);
   const [daysPresent, setDaysPresent] = useState(20);
@@ -34,7 +36,7 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
   const netPayable = Math.max(0, baseStipend - deductionAmount + Number(performanceBonus || 0));
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Stipend & Payroll Calculator (PKR)" maxWidth="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Stipend & Payroll Voucher (${company.currencyCode})`} maxWidth="md">
       <div className="space-y-4 text-xs">
         
         {/* Input Parameters Form */}
@@ -42,10 +44,10 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <div>
               <h4 className="font-bold text-slate-900">{personName}</h4>
-              <p className="text-[11px] text-slate-500">{role} ? {department}</p>
+              <p className="text-[11px] text-slate-500">{role} • {department} • {company.companyName}</p>
             </div>
             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-semibold font-mono text-[11px] border border-emerald-200">
-              PKR {baseStipend.toLocaleString()} / mo
+              {formatCurrency(baseStipend)} / mo
             </span>
           </div>
 
@@ -120,11 +122,11 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 font-mono text-[11px]">
           <div className="flex items-center justify-between text-slate-600">
             <span>Base Stipend:</span>
-            <span>PKR {baseStipend.toLocaleString()}</span>
+            <span>{formatCurrency(baseStipend)}</span>
           </div>
           <div className="flex items-center justify-between text-slate-600">
             <span>Daily Pro-Rata Rate:</span>
-            <span>PKR {dailyRate.toLocaleString()} / day</span>
+            <span>{formatCurrency(dailyRate)} / day</span>
           </div>
           <div className="flex items-center justify-between text-slate-600">
             <span>Effective Paid Days:</span>
@@ -133,19 +135,19 @@ export const PayrollModal: React.FC<PayrollModalProps> = ({
           {deductionAmount > 0 && (
             <div className="flex items-center justify-between text-red-600 font-semibold">
               <span>Absence Deductions ({deductionDays} days):</span>
-              <span>- PKR {deductionAmount.toLocaleString()}</span>
+              <span>- {formatCurrency(deductionAmount)}</span>
             </div>
           )}
           {performanceBonus > 0 && (
             <div className="flex items-center justify-between text-emerald-600 font-semibold">
               <span>Performance Bonus:</span>
-              <span>+ PKR {performanceBonus.toLocaleString()}</span>
+              <span>+ {formatCurrency(performanceBonus)}</span>
             </div>
           )}
 
           <div className="border-t-2 border-slate-900 pt-2 flex items-center justify-between text-sm font-bold text-slate-950">
             <span>Net Payable Stipend:</span>
-            <span className="text-emerald-700 text-base">PKR {netPayable.toLocaleString()}</span>
+            <span className="text-emerald-700 text-base">{formatCurrency(netPayable)}</span>
           </div>
         </div>
 

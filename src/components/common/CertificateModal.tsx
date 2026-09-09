@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { Award, Download, Share2, CheckCircle2, ShieldCheck, Printer } from 'lucide-react';
 
 interface CertificateModalProps {
@@ -26,12 +27,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
   completionDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
   certificateId = 'PL-CERT-' + Date.now().toString(36).toUpperCase()
 }) => {
+  const { company } = useCompanyProfile();
+
   const handlePrint = () => {
     window.print();
   };
 
   const handleShareLinkedIn = () => {
-    const text = encodeURIComponent(`Proud to announce that I have successfully completed my ${durationMonths}-month internship as a ${role} at Pile & Loop! Certificate ID: ${certificateId}`);
+    const text = encodeURIComponent(`Proud to announce that I have successfully completed my ${durationMonths}-month internship as a ${role} at ${company.companyName}! Certificate ID: ${certificateId}`);
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=https://hros-beryl.vercel.app/verify/${certificateId}&summary=${text}`, '_blank');
   };
 
@@ -51,10 +54,17 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
 
           {/* Top Emblem & Brand */}
           <div className="flex flex-col items-center space-y-1.5 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-600 to-indigo-700 flex items-center justify-center text-white font-extrabold text-xl shadow-md">
-              P&L
-            </div>
-            <h4 className="text-xs font-bold tracking-widest text-slate-400 uppercase">Pile & Loop Digital</h4>
+            {company.logoUrl ? (
+              <img src={company.logoUrl} alt={company.companyName} className="h-12 max-w-[150px] object-contain mb-1" />
+            ) : (
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-md"
+                style={{ backgroundColor: company.primaryColor || '#10B981' }}
+              >
+                {company.companyName.slice(0, 3).toUpperCase()}
+              </div>
+            )}
+            <h4 className="text-xs font-bold tracking-widest text-slate-400 uppercase">{company.legalName || company.companyName}</h4>
             <div className="h-0.5 w-16 bg-amber-500 rounded-full my-1"></div>
             <h2 className="text-2xl sm:text-3xl font-serif tracking-wide text-slate-900 uppercase font-semibold">
               Certificate of Completion
@@ -80,11 +90,11 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
             {/* Signature 1 */}
             <div className="text-center">
               <div className="font-serif italic text-base text-slate-800 font-semibold mb-1">
-                Sarah Jenkins
+                {company.signatoryName || 'Executive Director'}
               </div>
               <div className="h-px w-28 bg-slate-400 mx-auto mb-1"></div>
-              <p className="text-[10px] font-bold text-slate-700">Managing Director</p>
-              <p className="text-[9px] text-slate-400">Pile & Loop</p>
+              <p className="text-[10px] font-bold text-slate-700">{company.signatoryTitle || 'Managing Director'}</p>
+              <p className="text-[9px] text-slate-400">{company.companyName}</p>
             </div>
 
             {/* Middle Seal / QR code */}
@@ -99,17 +109,17 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({
             {/* Signature 2 */}
             <div className="text-center">
               <div className="font-serif italic text-base text-slate-800 font-semibold mb-1">
-                Kamran Raza
+                Office of Talent &amp; Culture
               </div>
               <div className="h-px w-28 bg-slate-400 mx-auto mb-1"></div>
               <p className="text-[10px] font-bold text-slate-700">Head of Human Resources</p>
-              <p className="text-[9px] text-slate-400">Pile & Loop</p>
+              <p className="text-[9px] text-slate-400">{company.companyName}</p>
             </div>
           </div>
 
           <div className="mt-6 pt-3 text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-100/60">
             <span>Issue Date: {completionDate}</span>
-            <span>Verify at: https://hros-beryl.vercel.app</span>
+            <span>Verify at: https://hros-beryl.vercel.app/verify/{certificateId}</span>
           </div>
         </div>
 

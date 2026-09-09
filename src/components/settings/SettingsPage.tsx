@@ -8,6 +8,9 @@ import { UserRole, UserProfile } from '../../types/auth';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
+import { getDiscordWebhookUrl, setDiscordWebhookUrl, sendDiscordWebhook } from '../../services/discord';
+import { getSupabaseCredentials, saveSupabaseCredentials, testSupabaseConnection } from '../../services/supabase';
+import { useCompanyProfile, COMPANY_PRESETS, CompanyProfile } from '../../contexts/CompanyContext';
 import {
   Settings,
   Building,
@@ -23,12 +26,29 @@ import {
   AlertCircle,
   Check,
   X,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare,
+  Database,
+  Palette,
+  Globe,
+  DollarSign,
+  MapPin,
+  RefreshCw,
+  Sliders,
+  ExternalLink
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { isSuperAdmin, isSupervisor } = useAuth();
-  const [activeTab, setActiveTab] = useState<'COMPANY' | 'RECRUITMENT' | 'INTERNSHIP' | 'EMAIL' | 'AI' | 'USERS'>('COMPANY');
+  const { company, updateCompanyProfile, applyPreset, resetToDefaults } = useCompanyProfile();
+  const [activeTab, setActiveTab] = useState<'COMPANY' | 'RECRUITMENT' | 'INTERNSHIP' | 'EMAIL' | 'AI' | 'USERS' | 'INTEGRATIONS'>('COMPANY');
+
+  // Dynamic Company & Brand State
+  const [companyForm, setCompanyForm] = useState<CompanyProfile>(company);
+
+  useEffect(() => {
+    setCompanyForm(company);
+  }, [company]);
 
   // System Settings State
   const [settings, setSettings] = useState({
@@ -51,6 +71,17 @@ export const SettingsPage: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Discord & Supabase State
+  const [discordUrl, setDiscordUrl] = useState(getDiscordWebhookUrl());
+  const [testingDiscord, setTestingDiscord] = useState(false);
+  const [discordStatus, setDiscordStatus] = useState<string | null>(null);
+
+  const creds = getSupabaseCredentials();
+  const [supabaseUrl, setSupabaseUrl] = useState(creds.url);
+  const [supabaseKey, setSupabaseKey] = useState(creds.anonKey);
+  const [testingSupabase, setTestingSupabase] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState<string | null>(null);
 
   // Add User Modal
   const [addUserModalOpen, setAddUserModalOpen] = useState(false);
@@ -126,6 +157,12 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleSaveCompanyProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCompanyProfile(companyForm);
+    alert('Company & Brand Profile updated! Logo, colors, currency, and documents updated across the platform.');
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingUser(true);
@@ -182,6 +219,52 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleSaveDiscord = () => {
+    setDiscordWebhookUrl(discordUrl);
+    alert('Discord Webhook URL saved successfully!');
+  };
+
+  const handleTestDiscord = async () => {
+    setTestingDiscord(true);
+    setDiscordStatus(null);
+    try {
+      setDiscordWebhookUrl(discordUrl);
+      const res = await sendDiscordWebhook({
+        title: '🚀 Pile & Loop HROS Test Alert',
+        description: 'Your Discord Webhook integration is active and operating normally!',
+        color: 0x0284c7,
+        fields: [
+          { name: 'System', value: 'Pile & Loop HR System (Vercel)', inline: true },
+          { name: 'Status', value: 'Connected & Verified', inline: true },
+          { name: 'Timestamp', value: new Date().toLocaleString(), inline: false }
+        ]
+      });
+      if (res.success) {
+        setDiscordStatus('Success! Discord test alert dispatched to your channel.');
+      } else {
+        setDiscordStatus(`Error: ${res.error}`);
+      }
+    } finally {
+      setTestingDiscord(false);
+    }
+  };
+
+  const handleSaveSupabase = async () => {
+    saveSupabaseCredentials(supabaseUrl, supabaseKey);
+    setTestingSupabase(true);
+    setSupabaseStatus(null);
+    try {
+      const res = await testSupabaseConnection(supabaseUrl, supabaseKey);
+      if (res.success) {
+        setSupabaseStatus('Success! Supabase connection established.');
+      } else {
+        setSupabaseStatus(`Error: ${res.error}`);
+      }
+    } finally {
+      setTestingSupabase(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -193,9 +276,9 @@ export const SettingsPage: React.FC = () => {
       <div className="flex border-b border-slate-200 text-xs font-medium text-slate-500 overflow-x-auto">
         <button
           onClick={() => setActiveTab('COMPANY')}
-          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'COMPANY' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'COMPANY' ? 'border-emerald-600 text-emerald-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <Building className="w-3.5 h-3.5" /> Company & General
+          <Building className="w-3.5 h-3.5" /> Company &amp; Brand Profile
         </button>
         <button
           onClick={() => setActiveTab('RECRUITMENT')}
@@ -234,42 +317,400 @@ export const SettingsPage: React.FC = () => {
             )}
           </button>
         )}
+        <button
+          onClick={() => setActiveTab('INTEGRATIONS')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'INTEGRATIONS' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" /> Discord & Supabase
+        </button>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        {/* COMPANY SETTINGS */}
+        {/* COMPANY & BRAND PROFILE STUDIO */}
         {activeTab === 'COMPANY' && (
-          <form onSubmit={handleSaveSettings} className="space-y-4 max-w-xl text-xs">
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Company Name</label>
-              <input
-                type="text"
-                value={settings.companyName}
-                onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
+          <div className="space-y-6">
+            
+            {/* Quick Presets Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  White-Label &amp; Brand Customization Engine
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Switch presets instantly or configure your custom brand. All changes dynamically apply to documents, navbar, and portals.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() => applyPreset('PILE_AND_LOOP')}
+                  className="text-xs bg-white hover:bg-emerald-50 border-emerald-300 text-emerald-700"
+                >
+                  🟢 Pile &amp; Loop (Official)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() => applyPreset('NOVA_TECH')}
+                  className="text-xs bg-white hover:bg-blue-50 border-blue-300 text-blue-700"
+                >
+                  🔵 Nova Dynamics (Tech)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() => applyPreset('APEX_STUDIO')}
+                  className="text-xs bg-white hover:bg-purple-50 border-purple-300 text-purple-700"
+                >
+                  🟣 Apex Studios (Agency)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={resetToDefaults}
+                  className="text-xs text-slate-500"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Reset
+                </Button>
+              </div>
             </div>
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Primary HR Mailbox</label>
-              <input
-                type="email"
-                value={settings.hrEmail}
-                onChange={(e) => setSettings({ ...settings, hrEmail: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
+
+            {/* Live Interactive Brand Card Preview */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div
+                className="p-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors"
+                style={{ backgroundColor: companyForm.primaryColor || '#10B981' }}
+              >
+                <div className="flex items-center space-x-3.5">
+                  {companyForm.logoUrl ? (
+                    <img
+                      src={companyForm.logoUrl}
+                      alt="Logo Preview"
+                      className="h-10 max-w-[140px] object-contain rounded bg-white/10 p-1 backdrop-blur-xs"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-extrabold text-sm shadow-xs">
+                      {companyForm.companyName ? companyForm.companyName.slice(0, 3).toUpperCase() : 'APP'}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-extrabold text-base tracking-tight leading-tight">{companyForm.companyName}</h3>
+                    <p className="text-xs text-white/80 font-medium">{companyForm.tagline || 'HR Management & Operations System'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md font-mono text-[11px] font-semibold">
+                    Currency: {companyForm.currencySymbol} ({companyForm.currencyCode})
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-black/20 backdrop-blur-md text-[11px]">
+                    {companyForm.timezone}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-900 text-slate-300 text-[11px] flex flex-wrap items-center justify-between gap-3">
+                <span className="flex items-center gap-1 text-slate-400">
+                  <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                  {companyForm.address || 'Address not configured'}
+                </span>
+                <span className="flex items-center gap-1 text-slate-400">
+                  <Mail className="w-3.5 h-3.5 text-slate-500" />
+                  {companyForm.hrEmail || companyForm.supportEmail}
+                </span>
+                <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Live Reactive Branding Active
+                </span>
+              </div>
             </div>
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Authoritative Timezone</label>
-              <input
-                type="text"
-                disabled
-                value={settings.timezone}
-                className="w-full p-2 border rounded bg-slate-50 text-slate-500"
-              />
-              <p className="text-[11px] text-slate-400 mt-1">Locked to Asia/Karachi (PKT) for all attendance and pipeline timelines.</p>
-            </div>
-            <Button size="sm" type="submit" loading={savingSettings}>Save Changes</Button>
-          </form>
+
+            {/* Comprehensive Brand Profile Form */}
+            <form onSubmit={handleSaveCompanyProfile} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Column 1: Identity */}
+                <div className="space-y-3 bg-white p-4 border border-slate-200 rounded-xl">
+                  <h5 className="font-bold text-slate-900 text-xs flex items-center gap-1.5 pb-1 border-b border-slate-100">
+                    <Building className="w-3.5 h-3.5 text-slate-600" />
+                    Company Identity &amp; URLs
+                  </h5>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Company Display Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={companyForm.companyName}
+                      onChange={(e) => setCompanyForm({ ...companyForm, companyName: e.target.value })}
+                      placeholder="e.g. Pile and Loop"
+                      className="w-full p-2 border border-slate-300 rounded font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Legal Registered Entity Name</label>
+                    <input
+                      type="text"
+                      value={companyForm.legalName}
+                      onChange={(e) => setCompanyForm({ ...companyForm, legalName: e.target.value })}
+                      placeholder="e.g. Pile & Loop (Pvt.) Ltd."
+                      className="w-full p-2 border border-slate-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Brand Tagline</label>
+                    <input
+                      type="text"
+                      value={companyForm.tagline}
+                      onChange={(e) => setCompanyForm({ ...companyForm, tagline: e.target.value })}
+                      placeholder="e.g. Premium Keyboard Rugs, Desk Mats & Digital Craft"
+                      className="w-full p-2 border border-slate-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Official Website URL</label>
+                    <input
+                      type="url"
+                      value={companyForm.websiteUrl}
+                      onChange={(e) => setCompanyForm({ ...companyForm, websiteUrl: e.target.value })}
+                      placeholder="https://pileandloop.com"
+                      className="w-full p-2 border border-slate-300 rounded font-mono text-[11px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Logo Image URL</label>
+                    <input
+                      type="url"
+                      value={companyForm.logoUrl}
+                      onChange={(e) => setCompanyForm({ ...companyForm, logoUrl: e.target.value })}
+                      placeholder="https://pileandloop.com/wp-content/uploads/.../logo.png"
+                      className="w-full p-2 border border-slate-300 rounded font-mono text-[11px]"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Direct PNG/SVG/WebP URL. Leave empty to use stylized brand monogram.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Favicon URL</label>
+                    <input
+                      type="text"
+                      value={companyForm.faviconUrl}
+                      onChange={(e) => setCompanyForm({ ...companyForm, faviconUrl: e.target.value })}
+                      placeholder="/favicon.svg"
+                      className="w-full p-2 border border-slate-300 rounded font-mono text-[11px]"
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: Theming, Finance & Operations */}
+                <div className="space-y-3 bg-white p-4 border border-slate-200 rounded-xl">
+                  <h5 className="font-bold text-slate-900 text-xs flex items-center gap-1.5 pb-1 border-b border-slate-100">
+                    <Palette className="w-3.5 h-3.5 text-slate-600" />
+                    Color, Currency &amp; Legal Signatory
+                  </h5>
+
+                  {/* Brand Color Picker */}
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Primary Brand Accent Color</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={companyForm.primaryColor || '#10B981'}
+                        onChange={(e) => setCompanyForm({ ...companyForm, primaryColor: e.target.value })}
+                        className="w-9 h-9 rounded cursor-pointer border border-slate-300 p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={companyForm.primaryColor}
+                        onChange={(e) => setCompanyForm({ ...companyForm, primaryColor: e.target.value })}
+                        className="w-28 p-2 border border-slate-300 rounded font-mono uppercase text-xs"
+                      />
+                      {/* Preset color swatches */}
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        {[
+                          { color: '#10B981', name: 'Emerald' },
+                          { color: '#0284c7', name: 'Sky' },
+                          { color: '#6366f1', name: 'Indigo' },
+                          { color: '#8b5cf6', name: 'Purple' },
+                          { color: '#f59e0b', name: 'Amber' },
+                          { color: '#0f172a', name: 'Slate' }
+                        ].map((sw) => (
+                          <button
+                            key={sw.color}
+                            type="button"
+                            title={sw.name}
+                            onClick={() => setCompanyForm({ ...companyForm, primaryColor: sw.color })}
+                            className="w-6 h-6 rounded-full border border-slate-300 hover:scale-110 transition-transform shadow-2xs"
+                            style={{ backgroundColor: sw.color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Currency Selector */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Official Currency Code</label>
+                      <select
+                        value={companyForm.currencyCode}
+                        onChange={(e) => {
+                          const code = e.target.value;
+                          const symbols: Record<string, string> = {
+                            PKR: 'Rs.',
+                            USD: '$',
+                            EUR: '€',
+                            GBP: '£',
+                            AED: 'AED',
+                            SAR: 'SAR',
+                            CAD: '$',
+                            INR: '₹'
+                          };
+                          setCompanyForm({
+                            ...companyForm,
+                            currencyCode: code,
+                            currencySymbol: symbols[code] || code
+                          });
+                        }}
+                        className="w-full p-2 border border-slate-300 rounded bg-white font-semibold"
+                      >
+                        <option value="PKR">PKR (Pakistani Rupee)</option>
+                        <option value="USD">USD (US Dollar)</option>
+                        <option value="EUR">EUR (Euro)</option>
+                        <option value="GBP">GBP (British Pound)</option>
+                        <option value="AED">AED (UAE Dirham)</option>
+                        <option value="SAR">SAR (Saudi Riyal)</option>
+                        <option value="CAD">CAD (Canadian Dollar)</option>
+                        <option value="INR">INR (Indian Rupee)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Currency Symbol</label>
+                      <input
+                        type="text"
+                        value={companyForm.currencySymbol}
+                        onChange={(e) => setCompanyForm({ ...companyForm, currencySymbol: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded font-mono font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Timezone */}
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Company Operating Timezone</label>
+                    <select
+                      value={companyForm.timezone}
+                      onChange={(e) => setCompanyForm({ ...companyForm, timezone: e.target.value })}
+                      className="w-full p-2 border border-slate-300 rounded bg-white font-mono text-xs"
+                    >
+                      <option value="Asia/Karachi">Asia/Karachi (PKT • UTC+5)</option>
+                      <option value="America/New_York">America/New_York (EST • UTC-5)</option>
+                      <option value="Europe/London">Europe/London (GMT • UTC+0)</option>
+                      <option value="Asia/Dubai">Asia/Dubai (GST • UTC+4)</option>
+                      <option value="UTC">UTC (Universal Coordinated Time)</option>
+                    </select>
+                  </div>
+
+                  {/* HR Mail & Support Mail */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Primary HR Mailbox</label>
+                      <input
+                        type="email"
+                        value={companyForm.hrEmail}
+                        onChange={(e) => setCompanyForm({ ...companyForm, hrEmail: e.target.value })}
+                        placeholder="hr@pileandloop.com"
+                        className="w-full p-2 border border-slate-300 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Support / Admin Email</label>
+                      <input
+                        type="email"
+                        value={companyForm.supportEmail}
+                        onChange={(e) => setCompanyForm({ ...companyForm, supportEmail: e.target.value })}
+                        placeholder="pileandloop@gmail.com"
+                        className="w-full p-2 border border-slate-300 rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Office Address */}
+                  <div>
+                    <label className="block text-slate-700 font-medium mb-1">Headquarters / Office Address</label>
+                    <input
+                      type="text"
+                      value={companyForm.address}
+                      onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                      placeholder="Gulberg III, Lahore, Punjab, Pakistan"
+                      className="w-full p-2 border border-slate-300 rounded"
+                    />
+                  </div>
+
+                  {/* Signatories */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Signatory Name</label>
+                      <input
+                        type="text"
+                        value={companyForm.signatoryName}
+                        onChange={(e) => setCompanyForm({ ...companyForm, signatoryName: e.target.value })}
+                        placeholder="e.g. Managing Director"
+                        className="w-full p-2 border border-slate-300 rounded"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-medium mb-1">Signatory Designation</label>
+                      <input
+                        type="text"
+                        value={companyForm.signatoryTitle}
+                        onChange={(e) => setCompanyForm({ ...companyForm, signatoryTitle: e.target.value })}
+                        placeholder="e.g. Head of Human Resources"
+                        className="w-full p-2 border border-slate-300 rounded"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms Clause */}
+              <div className="bg-white p-4 border border-slate-200 rounded-xl space-y-2">
+                <label className="block text-slate-700 font-medium">Standard Offer &amp; Agreement Terms Clause</label>
+                <textarea
+                  rows={2}
+                  value={companyForm.termsSummary}
+                  onChange={(e) => setCompanyForm({ ...companyForm, termsSummary: e.target.value })}
+                  placeholder="Terms appearing on electronic offer letters and internship agreements..."
+                  className="w-full p-2 border border-slate-300 rounded text-xs"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-[11px] text-slate-500">
+                  Updates apply instantly to all active browsers, documents, certificates, and payroll vouchers.
+                </p>
+                <Button size="sm" type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm px-5">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  Save Company Profile &amp; Apply Universally
+                </Button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* RECRUITMENT SETTINGS */}
@@ -547,6 +988,107 @@ export const SettingsPage: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* INTEGRATIONS (DISCORD & SUPABASE) */}
+        {activeTab === 'INTEGRATIONS' && (
+          <div className="space-y-6 text-xs max-w-2xl">
+            {/* Discord Webhook Card */}
+            <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-[#5865F2] flex items-center justify-center text-white font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Discord Real-Time Webhook Alerts</h3>
+                  <p className="text-[11px] text-slate-500">Automatically broadcast candidate applications, sign-up requests, and attendance punches to your Discord server.</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Discord Webhook URL</label>
+                  <input
+                    type="url"
+                    value={discordUrl}
+                    onChange={(e) => setDiscordUrl(e.target.value)}
+                    placeholder="https://discord.com/api/webhooks/123456789/abcdefgh..."
+                    className="w-full p-2 border border-slate-300 rounded font-mono text-[11px] focus:ring-2 focus:ring-sky-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    How to get: In Discord, go to Channel Settings → Integrations → Webhooks → Copy Webhook URL.
+                  </p>
+                </div>
+
+                {discordStatus && (
+                  <div className={`p-2.5 rounded text-xs font-semibold ${discordStatus.startsWith('Success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {discordStatus}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Button size="sm" onClick={handleSaveDiscord} className="bg-sky-600 hover:bg-sky-700 text-white">
+                    Save Webhook URL
+                  </Button>
+                  <Button size="sm" variant="outline" loading={testingDiscord} onClick={handleTestDiscord}>
+                    Send Live Test Alert to Discord
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Supabase Cloud Database Card */}
+            <div className="border border-slate-200 rounded-xl p-5 bg-white space-y-4 shadow-sm">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-[#3ECF8E] flex items-center justify-center text-slate-900 font-bold">
+                  <Database className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Supabase Cloud Database Synchronization</h3>
+                  <p className="text-[11px] text-slate-500">Connect a free PostgreSQL database from supabase.com for real-time sync across multiple laptops and devices.</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Supabase Project URL</label>
+                  <input
+                    type="url"
+                    value={supabaseUrl}
+                    onChange={(e) => setSupabaseUrl(e.target.value)}
+                    placeholder="https://xyzcompany.supabase.co"
+                    className="w-full p-2 border border-slate-300 rounded font-mono text-[11px] focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Supabase Anon Public API Key</label>
+                  <input
+                    type="password"
+                    value={supabaseKey}
+                    onChange={(e) => setSupabaseKey(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    className="w-full p-2 border border-slate-300 rounded font-mono text-[11px] focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Found in Supabase Console → Project Settings → API → anon public key.
+                  </p>
+                </div>
+
+                {supabaseStatus && (
+                  <div className={`p-2.5 rounded text-xs font-semibold ${supabaseStatus.startsWith('Success') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {supabaseStatus}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Button size="sm" loading={testingSupabase} onClick={handleSaveSupabase} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                    Save & Test Supabase Handshake
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

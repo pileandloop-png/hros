@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { FileText, CheckCircle2, PenTool, Printer, ShieldCheck } from 'lucide-react';
 
 interface OfferLetterModalProps {
@@ -28,6 +29,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
   durationMonths = 4,
   onAcceptAndSign
 }) => {
+  const { company, formatCurrency } = useCompanyProfile();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSigned, setHasSigned] = useState(false);
@@ -92,18 +94,25 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
           
           {/* Letterhead */}
           <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-700 flex items-center justify-center text-white font-bold text-base shadow-sm">
-                P&L
-              </div>
+            <div className="flex items-center gap-3">
+              {company.logoUrl ? (
+                <img src={company.logoUrl} alt={company.companyName} className="h-10 max-w-[140px] object-contain" />
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-sm"
+                  style={{ backgroundColor: company.primaryColor || '#10B981' }}
+                >
+                  {company.companyName.slice(0, 3).toUpperCase()}
+                </div>
+              )}
               <div>
-                <h3 className="font-bold text-slate-900 text-sm">Pile & Loop</h3>
-                <p className="text-[10px] text-slate-400">Software Engineering & Product Studio ? Lahore, Pakistan</p>
+                <h3 className="font-bold text-slate-900 text-sm">{company.companyName}</h3>
+                <p className="text-[10px] text-slate-400">{company.address || 'Corporate Headquarters'}</p>
               </div>
             </div>
             <div className="text-right text-[11px] text-slate-500">
-              <p>Date: <strong>{new Date().toLocaleDateString('en-PK')}</strong></p>
-              <p>Ref: <span className="font-mono font-semibold">PL-OFFER-{Date.now().toString(36).toUpperCase()}</span></p>
+              <p>Date: <strong>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</strong></p>
+              <p>Ref: <span className="font-mono font-semibold">{company.companyName.slice(0, 2).toUpperCase()}-OFFER-{Date.now().toString(36).toUpperCase()}</span></p>
             </div>
           </div>
 
@@ -114,7 +123,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
           </div>
 
           <p className="leading-relaxed">
-            We are pleased to extend this offer for the position of <strong>{vacancyTitle}</strong> in the <strong>{department}</strong> department at <strong>Pile & Loop</strong>. We were thoroughly impressed by your skills, problem-solving mindset, and cultural alignment with our team.
+            We are pleased to extend this offer for the position of <strong>{vacancyTitle}</strong> in the <strong>{department}</strong> department at <strong>{company.legalName || company.companyName}</strong>. We were thoroughly impressed by your skills, problem-solving mindset, and cultural alignment with our team.
           </p>
 
           {/* Key Offer Terms Table */}
@@ -127,11 +136,11 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-400 block">Monthly Stipend</span>
-                <span className="font-semibold text-emerald-700 font-mono">PKR {stipendPkr.toLocaleString()} / mo</span>
+                <span className="font-semibold text-emerald-700 font-mono">{formatCurrency(stipendPkr)} / mo</span>
               </div>
               <div>
-                <span className="text-slate-400 block">Working Hours (PKT)</span>
-                <span className="font-semibold text-slate-800">09:00 - 18:00 (1hr lunch)</span>
+                <span className="text-slate-400 block">Timezone & Hours</span>
+                <span className="font-semibold text-slate-800">{company.timezone || 'Asia/Karachi'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block">Start Date</span>
@@ -143,13 +152,13 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-400 block">Work Model</span>
-                <span className="font-semibold text-slate-800">Hybrid / Office Presence</span>
+                <span className="font-semibold text-slate-800">Hybrid / Agile Presence</span>
               </div>
             </div>
           </div>
 
           <p className="leading-relaxed text-[11px] text-slate-600">
-            During your tenure, you will work on production features, attend stand-ups, receive 1-on-1 engineering mentorship, and track daily attendance via the HROS platform.
+            {company.termsSummary || 'During your tenure, you will work on production features, attend stand-ups, receive 1-on-1 mentorship, and track daily attendance via the HROS platform.'}
           </p>
 
           {/* Signature Block */}

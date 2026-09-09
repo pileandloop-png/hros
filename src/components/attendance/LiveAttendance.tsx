@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { Clock, Coffee, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
 
 export const LiveAttendance: React.FC = () => {
+  const { company } = useCompanyProfile();
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export const LiveAttendance: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Live Attendance Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Real-time team presence tracking in Asia/Karachi (PKT) timezone</p>
+          <p className="text-xs text-slate-500 mt-0.5">Real-time team presence tracking in {company.timezone || 'Asia/Karachi'} timezone</p>
         </div>
 
         <div className="flex items-center space-x-2">

@@ -1,5 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { Search, Bell, Clock, User, LogOut, Shield } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -7,23 +8,34 @@ import { useNavigate } from 'react-router-dom';
 
 export const Header: React.FC = () => {
   const { user, profile, role, logout } = useAuth();
+  const { company } = useCompanyProfile();
   const navigate = useNavigate();
   const [pktTime, setPktTime] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // PKT Time Clock (UTC+5 Asia/Karachi)
+  // Live Company Timezone Clock
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const pkt = new Date(utc + (3600000 * 5));
-      setPktTime(pkt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) + ' PKT');
+      try {
+        const timeZone = company.timezone || 'Asia/Karachi';
+        const str = new Date().toLocaleTimeString('en-US', {
+          timeZone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        const tzAbbr = timeZone === 'Asia/Karachi' ? 'PKT' : timeZone.split('/')[1] || timeZone;
+        setPktTime(`${str} ${tzAbbr}`);
+      } catch {
+        setPktTime(new Date().toLocaleTimeString());
+      }
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [company.timezone]);
 
   // Notifications count
   useEffect(() => {

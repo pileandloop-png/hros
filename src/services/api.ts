@@ -1,4 +1,5 @@
 import { store } from './store';
+import { notifyDiscordAttendancePunch } from './discord';
 
 // Helper: current PKT date string (YYYY-MM-DD)
 function getPktDateString(): string {
@@ -394,6 +395,10 @@ export async function checkIn(plannedTasks?: string) {
     updatedAt: now
   });
 
+  const timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit' });
+  notifyDiscordAttendancePunch(activeUser.displayName || 'Staff Member', 'CHECK_IN', timeStr)
+    .catch(e => console.warn('Discord punch notify error:', e));
+
   return { success: true, attendanceId, dateKey };
 }
 
@@ -464,6 +469,11 @@ export async function checkOut(data: {
     nextDayPlans: data.nextDayPlans || '',
     updatedAt: now.toISOString()
   });
+
+  const timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit' });
+  const hoursWorked = (netWorkedMinutes / 60).toFixed(1);
+  notifyDiscordAttendancePunch(activeUser.displayName || 'Staff Member', 'CHECK_OUT', timeStr, hoursWorked)
+    .catch(e => console.warn('Discord punch notify error:', e));
 
   return { success: true, totalWorkedMinutes, netWorkedMinutes, breakMinutes };
 }

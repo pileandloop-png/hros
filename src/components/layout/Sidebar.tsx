@@ -1,6 +1,7 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import {
   LayoutDashboard,
   Users,
@@ -23,6 +24,7 @@ import {
 
 export const Sidebar: React.FC = () => {
   const { role, isHrStaff, isTeamMemberOnly } = useAuth();
+  const { company } = useCompanyProfile();
 
   const hrNav = [
     {
@@ -138,14 +140,21 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0 border-r border-slate-800 select-none">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800/80 bg-slate-950/40">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm tracking-wider shadow-sm">
-            P&L
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-white tracking-tight">Pile & Loop</h1>
-            <p className="text-[11px] text-slate-400">HR Operating System</p>
+      <div className="h-16 flex items-center px-5 border-b border-slate-800/80 bg-slate-950/40">
+        <div className="flex items-center space-x-3 truncate">
+          {company.logoUrl ? (
+            <img src={company.logoUrl} alt={company.companyName} className="h-8 max-w-[42px] object-contain rounded shrink-0 bg-white/5 p-0.5" />
+          ) : (
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs tracking-wider shadow-sm shrink-0"
+              style={{ backgroundColor: company.primaryColor || '#10B981' }}
+            >
+              {company.companyName.slice(0, 3).toUpperCase()}
+            </div>
+          )}
+          <div className="truncate">
+            <h1 className="text-sm font-semibold text-white tracking-tight truncate">{company.companyName}</h1>
+            <p className="text-[10px] text-slate-400 truncate">{company.tagline || 'HR Operating System'}</p>
           </div>
         </div>
       </div>

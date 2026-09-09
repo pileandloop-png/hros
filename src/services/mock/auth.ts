@@ -1,4 +1,5 @@
 import { store } from '../store';
+import { notifyDiscordAccessRequest } from '../discord';
 
 export interface User {
   uid: string;
@@ -198,6 +199,10 @@ export const submitUserRequest = async (data: {
     read: false,
     createdAt: new Date().toISOString()
   });
+
+  // Dispatch Discord alert
+  notifyDiscordAccessRequest(data.fullName, email, data.requestedRole || 'TEAM_MEMBER', data.department || 'General')
+    .catch(e => console.warn('Discord webhook notify error:', e));
 
   return { success: true, message: 'Request submitted successfully to Super Admin.' };
 };

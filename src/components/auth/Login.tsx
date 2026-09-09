@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompanyProfile } from '../../contexts/CompanyContext';
 import { Button } from '../common/Button';
 import { Lock, Mail, ShieldAlert, UserPlus, CheckCircle2, Building, ShieldCheck, User } from 'lucide-react';
 import { submitUserRequest } from '../../services/mock/auth';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
+  const { company } = useCompanyProfile();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
@@ -93,11 +95,18 @@ export const Login: React.FC = () => {
         
         {/* Header Branding */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md mb-2">
-            P&L
-          </div>
-          <h2 className="text-xl font-bold text-slate-900">Pile & Loop HR System</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Internal Human Resources Operating Platform</p>
+          {company.logoUrl ? (
+            <img src={company.logoUrl} alt={company.companyName} className="h-12 max-w-[180px] object-contain mb-2" />
+          ) : (
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md mb-2"
+              style={{ backgroundColor: company.primaryColor || '#10B981' }}
+            >
+              {company.companyName.slice(0, 3).toUpperCase()}
+            </div>
+          )}
+          <h2 className="text-xl font-bold text-slate-900">{company.companyName}</h2>
+          <p className="text-xs text-slate-500 mt-0.5">{company.tagline || 'Human Resources Operating Platform'}</p>
         </div>
 
         {/* Tab Navigation */}

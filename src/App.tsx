@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CompanyProvider } from './contexts/CompanyContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './components/auth/Login';
@@ -29,16 +30,19 @@ import { NotificationCenter } from './components/notifications/NotificationCente
 import { AuditLogPage } from './components/audit/AuditLogPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { CareersPage } from './components/careers/CareersPage';
+import { VerifyCertificate } from './components/verification/VerifyCertificate';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/careers" element={<CareersPage />} />
+      <CompanyProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/careers" element={<CareersPage />} />
+            <Route path="/verify/:certId" element={<VerifyCertificate />} />
 
-          <Route
+            <Route
             path="/"
             element={
               <ProtectedRoute>
@@ -104,6 +108,7 @@ export const App: React.FC = () => {
           </Route>
         </Routes>
       </BrowserRouter>
+      </CompanyProvider>
     </AuthProvider>
   );
 };

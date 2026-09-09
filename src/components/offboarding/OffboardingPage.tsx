@@ -7,6 +7,7 @@ import { OffboardingCase } from '../../types/workflow';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
+import { CertificateModal } from '../common/CertificateModal';
 import { UserX, Clock, CheckCircle2, AlertTriangle, ShieldCheck, Award, FileText } from 'lucide-react';
 
 export const OffboardingPage: React.FC = () => {
@@ -18,6 +19,14 @@ export const OffboardingPage: React.FC = () => {
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<any | null>(null);
   const [finalizeModalOpen, setFinalizeModalOpen] = useState(false);
+
+  // Certificate Modal
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [selectedCertIntern, setSelectedCertIntern] = useState({
+    name: 'Saad Qureshi',
+    role: 'Software Engineering Intern',
+    department: 'Engineering'
+  });
   const [certificateDecision, setCertificateDecision] = useState('ISSUED');
   const [letterDecision, setLetterDecision] = useState('ISSUED');
   const [finalNotes, setFinalNotes] = useState('');
@@ -193,6 +202,19 @@ export const OffboardingPage: React.FC = () => {
                       Finalize Offboarding
                     </Button>
                   )}
+                  {c.status === 'COMPLETED' && (
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setSelectedCertIntern({
+                        name: c.personName,
+                        role: 'Software Engineering Intern',
+                        department: 'Engineering'
+                      });
+                      setCertModalOpen(true);
+                    }}>
+                      <Award className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                      View Certificate
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -339,6 +361,15 @@ export const OffboardingPage: React.FC = () => {
           </form>
         </Modal>
       )}
+
+      {/* Certificate of Completion Modal */}
+      <CertificateModal
+        isOpen={certModalOpen}
+        onClose={() => setCertModalOpen(false)}
+        internName={selectedCertIntern.name}
+        role={selectedCertIntern.role}
+        department={selectedCertIntern.department}
+      />
     </div>
   );
 };

@@ -6,7 +6,8 @@ import { correctAttendance } from '../../services/api';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
-import { Download, Edit3, Clock, AlertTriangle } from 'lucide-react';
+import { PayrollModal } from '../payroll/PayrollModal';
+import { Download, Edit3, Clock, AlertTriangle, Calculator } from 'lucide-react';
 import Papa from 'papaparse';
 
 export const Timesheets: React.FC = () => {
@@ -20,6 +21,15 @@ export const Timesheets: React.FC = () => {
   const [correctedHours, setCorrectedHours] = useState<number>(5);
   const [correctionReason, setCorrectionReason] = useState('');
   const [savingCorrection, setSavingCorrection] = useState(false);
+
+  // Payroll Modal
+  const [payrollModalOpen, setPayrollModalOpen] = useState(false);
+  const [selectedPersonForPayroll, setSelectedPersonForPayroll] = useState({
+    name: 'Saad Qureshi',
+    role: 'Software Engineering Intern',
+    department: 'Engineering',
+    baseStipend: 35000
+  });
 
   const loadTimesheets = async () => {
     setLoading(true);
@@ -83,10 +93,16 @@ export const Timesheets: React.FC = () => {
           <p className="text-xs text-slate-500 mt-0.5">Historical work logs, productive hours, and supervisor audit adjustments</p>
         </div>
 
-        <Button size="sm" variant="outline" onClick={handleExportCsv}>
-          <Download className="w-3.5 h-3.5 mr-1.5" />
-          Export Timesheet CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPayrollModalOpen(true)}>
+            <Calculator className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            Stipend & Payslip Calculator
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleExportCsv}>
+            <Download className="w-3.5 h-3.5 mr-1.5" />
+            Export Timesheet CSV
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
@@ -215,6 +231,16 @@ export const Timesheets: React.FC = () => {
           </form>
         </Modal>
       )}
+
+      {/* Payroll Modal */}
+      <PayrollModal
+        isOpen={payrollModalOpen}
+        onClose={() => setPayrollModalOpen(false)}
+        personName={selectedPersonForPayroll.name}
+        department={selectedPersonForPayroll.department}
+        role={selectedPersonForPayroll.role}
+        baseStipend={selectedPersonForPayroll.baseStipend}
+      />
     </div>
   );
 };

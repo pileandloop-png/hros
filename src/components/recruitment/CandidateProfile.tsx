@@ -8,6 +8,7 @@ import { Application, Candidate, ApplicationStage } from '../../types/recruitmen
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
+import { OfferLetterModal } from '../common/OfferLetterModal';
 import {
   Briefcase,
   Mail,
@@ -17,7 +18,8 @@ import {
   Send,
   Lock,
   ExternalLink,
-  ChevronLeft
+  ChevronLeft,
+  FileCheck
 } from 'lucide-react';
 
 export const CandidateProfile: React.FC = () => {
@@ -57,6 +59,9 @@ export const CandidateProfile: React.FC = () => {
   const [newStageSelected, setNewStageSelected] = useState<ApplicationStage>('INITIAL_EMAIL_SENT');
   const [stageChangeReason, setStageChangeReason] = useState('');
   const [stageLoading, setStageLoading] = useState(false);
+
+  // Offer Letter modal
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
 
   const loadAllCandidateData = async () => {
     if (!candidateId) return;
@@ -463,11 +468,36 @@ export const CandidateProfile: React.FC = () => {
 
         {activeTab === 'ONBOARDING' && (
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Onboarding</h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Offer Agreement & Onboarding</h3>
+                <p className="text-xs text-slate-500">Official employment terms, digital signature, and onboarding checklist.</p>
+              </div>
+              <Button size="sm" onClick={() => setOfferModalOpen(true)} className="bg-sky-600 hover:bg-sky-700 text-white">
+                <FileCheck className="w-3.5 h-3.5 mr-1.5" />
+                Generate Digital Offer Letter
+              </Button>
+            </div>
+
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <span className="font-semibold text-xs text-slate-800 block">Offer Letter Status</span>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Send an official Pile & Loop offer agreement with interactive e-signature canvas for the candidate to sign and accept directly in the browser.
+              </p>
+            </div>
+
             {onboardingCase ? (
-              <div className="text-xs">Status: <Badge variant="warning">{onboardingCase.status}</Badge></div>
+              <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-900">Onboarding Case Active</span>
+                  <Badge variant="warning">{onboardingCase.status}</Badge>
+                </div>
+                <p className="text-slate-500">Documents collected: Resume, CNIC Verification, System Credentials.</p>
+              </div>
             ) : (
-              <p className="text-xs text-slate-400">Onboarding case not yet created.</p>
+              <div className="p-4 bg-white border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                Onboarding case will activate automatically upon offer acceptance.
+              </div>
             )}
           </div>
         )}
@@ -595,6 +625,21 @@ export const CandidateProfile: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Offer Letter & E-Signature Modal */}
+      {candidate && (
+        <OfferLetterModal
+          isOpen={offerModalOpen}
+          onClose={() => setOfferModalOpen(false)}
+          candidateName={candidate.fullName}
+          candidateEmail={candidate.personalEmail || (candidate as any).email || ''}
+          vacancyTitle={(selectedApp as any)?.vacancyTitle || (candidate as any)?.vacancyTitle || 'Software Engineer Intern'}
+          onAcceptAndSign={({ signedAt }) => {
+            alert(`Offer accepted and signed on ${new Date(signedAt).toLocaleDateString()}!`);
+            loadAllCandidateData();
+          }}
+        />
+      )}
     </div>
   );
 };

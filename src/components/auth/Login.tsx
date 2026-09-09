@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../common/Button';
 import { Lock, Mail, ShieldAlert, UserPlus, CheckCircle2, Building, ShieldCheck, User } from 'lucide-react';
@@ -364,6 +364,16 @@ export const Login: React.FC = () => {
             </p>
           </form>
         )}
+
+        {/* Link to Public Careers Portal */}
+        <div className="mt-5 pt-4 border-t border-slate-100 text-center">
+          <Link
+            to="/careers"
+            className="text-xs text-sky-600 hover:text-sky-700 font-semibold inline-flex items-center gap-1 transition"
+          >
+            Looking for job & internship openings? <span className="underline">View Careers Portal →</span>
+          </Link>
+        </div>
 
       </div>
     </div>

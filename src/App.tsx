@@ -28,6 +28,7 @@ import { ReportsPage } from './components/reports/ReportsPage';
 import { NotificationCenter } from './components/notifications/NotificationCenter';
 import { AuditLogPage } from './components/audit/AuditLogPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { CareersPage } from './components/careers/CareersPage';
 
 export const App: React.FC = () => {
   return (
@@ -35,6 +36,7 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/careers" element={<CareersPage />} />
 
           <Route
             path="/"

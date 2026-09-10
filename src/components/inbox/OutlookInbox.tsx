@@ -25,9 +25,13 @@ import {
   UserCheck,
   Tag,
   Search,
-  FileCheck
+  FileCheck,
+  Settings as SettingsIcon,
+  Radio
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '../../contexts/ToastContext';
+import { getEmailAccounts, syncMailAccount, EmailAccountConfig } from '../../services/emailService';
 
 const FOLDERS = [
   { id: 'INBOX', label: 'Inbox', icon: Inbox },
@@ -57,6 +61,7 @@ export const OutlookInbox: React.FC = () => {
   const [searchParams] = useSearchParams();
   const threadIdParam = searchParams.get('threadId');
 
+  const { toast } = useToast();
   const [activeFolder, setActiveFolder] = useState('INBOX');
   const [activeCategory, setActiveCategory] = useState('All Categories');
   const [threads, setThreads] = useState<EmailThread[]>([]);
@@ -65,7 +70,41 @@ export const OutlookInbox: React.FC = () => {
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [syncStatusText, setSyncStatusText] = useState('Connected to cPanel IMAP');
+  const [syncStatusText, setSyncStatusText] = useState('Connected to mail.pileandloop.com:993');
+
+  // Multi-Account & 2-Second Real-Time Sync State
+  const [accounts, setAccounts] = useState<EmailAccountConfig[]>([]);
+  const [activeAccount, setActiveAccount] = useState<EmailAccountConfig | null>(null);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(true);
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  const [syncCount, setSyncCount] = useState<number>(0);
+
+  // Load configured accounts
+  useEffect(() => {
+    const accs = getEmailAccounts();
+    setAccounts(accs);
+    const def = accs.find(a => a.isDefault) || accs[0];
+    if (def) setActiveAccount(def);
+  }, []);
+
+  // 2-Second Corporate Real-Time Sync Heartbeat Pulse
+  useEffect(() => {
+    if (!autoSyncEnabled || !activeAccount) return;
+
+    const intervalSec = activeAccount.syncIntervalSeconds || 2;
+    const timer = setInterval(async () => {
+      try {
+        await syncMailAccount(activeAccount);
+        setLastSyncTime(new Date());
+        setSyncCount(prev => prev + 1);
+        setSyncStatusText(`2s Live sync active • ${activeAccount.imapHost}`);
+      } catch (err: any) {
+        setSyncStatusText(`Sync error: ${err?.message || 'Connection glitch'}`);
+      }
+    }, intervalSec * 1000);
+
+    return () => clearInterval(timer);
+  }, [autoSyncEnabled, activeAccount]);
 
   // Reply Composer & AI Assistant
   const [replyBody, setReplyBody] = useState('');
@@ -138,12 +177,22 @@ export const OutlookInbox: React.FC = () => {
 
   const handleSyncMailbox = async () => {
     setSyncing(true);
-    setSyncStatusText('Syncing with cPanel...');
+    const targetEmail = activeAccount?.email || 'hr@pileandloop.com';
+    setSyncStatusText(`Syncing ${targetEmail}...`);
     try {
-      const res: any = await syncHrMailbox();
-      setSyncStatusText(`Sync complete (${res.newMessagesCount || 0} new)`);
+      if (activeAccount) {
+        const res = await syncMailAccount(activeAccount);
+        setSyncStatusText(`Sync complete (${res.newEmailsCount || 0} new)`);
+        toast.success(`Mailbox synced: ${targetEmail}`);
+      } else {
+        const res: any = await syncHrMailbox();
+        setSyncStatusText(`Sync complete (${res.newMessagesCount || 0} new)`);
+        toast.success(`Mailbox synced (${res.newMessagesCount || 0} new)`);
+      }
+      setLastSyncTime(new Date());
     } catch (err: any) {
       setSyncStatusText(`Sync error: ${err.message}`);
+      toast.error(`Sync error: ${err.message}`);
     } finally {
       setSyncing(false);
     }
@@ -155,8 +204,9 @@ export const OutlookInbox: React.FC = () => {
     try {
       const res: any = await summarizeEmailThread(selectedThread.threadId);
       setAiSummary(res.summary);
+      toast.success('Email thread summarized by AI.');
     } catch (err: any) {
-      alert(err.message || 'Summarization failed');
+      toast.error(err.message || 'Summarization failed');
     } finally {
       setSummaryLoading(false);
     }
@@ -179,9 +229,10 @@ export const OutlookInbox: React.FC = () => {
         if (res.draft.warnings && res.draft.warnings.length > 0) {
           setAiWarnings(res.draft.warnings);
         }
+        toast.success('AI draft generated.');
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to generate draft');
+      toast.error(err.message || 'Failed to generate draft');
     } finally {
       setAiLoading(false);
     }
@@ -206,9 +257,9 @@ export const OutlookInbox: React.FC = () => {
       });
       setReplyBody('');
       setAiInstruction('');
-      alert('Reply dispatched via cPanel SMTP.');
+      toast.success(`Reply dispatched via cPanel SMTP to ${recipient}`);
     } catch (err: any) {
-      alert(err.message || 'Failed to send reply');
+      toast.error(err.message || 'Failed to send reply');
     } finally {
       setSendingReply(false);
     }
@@ -232,19 +283,52 @@ export const OutlookInbox: React.FC = () => {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-      {/* 1. LEFT PANE: Folders & Categories & Mailbox Health */}
-      <div className="w-56 bg-slate-50 border-r border-slate-200 flex flex-col justify-between p-3 select-none">
-        <div className="space-y-4">
+      {/* 1. LEFT PANE: Mailboxes, Folders, Categories & Live 2s Pulse */}
+      <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col justify-between p-3 select-none">
+        <div className="space-y-3 overflow-y-auto">
+          {/* Active Mailbox Selector */}
+          <div className="bg-white p-2.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Corporate Mailbox</span>
+              <button
+                type="button"
+                onClick={() => navigate('/settings')}
+                className="text-[10px] text-sky-600 hover:text-sky-800 flex items-center font-medium transition-colors"
+                title="Manage Mail Servers in Settings"
+              >
+                <SettingsIcon className="w-3 h-3 mr-0.5" />
+                Manage
+              </button>
+            </div>
+            <select
+              value={activeAccount?.id || ''}
+              onChange={(e) => {
+                const acc = accounts.find(a => a.id === e.target.value);
+                if (acc) {
+                  setActiveAccount(acc);
+                  toast.info(`Active mailbox set to ${acc.email}`);
+                }
+              }}
+              className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-md p-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.email} ({acc.accountName})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Sync Button */}
           <Button
             size="sm"
             variant="outline"
             onClick={handleSyncMailbox}
             loading={syncing}
-            className="w-full justify-center bg-white"
+            className="w-full justify-center bg-white shadow-2xs text-xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
-            Sync Mailbox
+            Sync Now ({activeAccount?.email?.split('@')[0] || 'Mailbox'})
           </Button>
 
           {/* Mail Folders */}
@@ -290,13 +374,34 @@ export const OutlookInbox: React.FC = () => {
           </div>
         </div>
 
-        {/* Mailbox Status Health Indicator */}
-        <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-[10px] text-slate-500 space-y-1">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-slate-700">hr@pileandloop.com</span>
+        {/* Real-Time 2-Second Sync Status Health Card */}
+        <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-[10px] space-y-1.5 shadow-2xs mt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-1.5 min-w-0">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${autoSyncEnabled ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'}`} />
+              <span className="font-semibold text-slate-700 truncate">{activeAccount?.email || 'hr@pileandloop.com'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                autoSyncEnabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'
+              }`}
+              title={autoSyncEnabled ? 'Pause automatic 2-second background sync' : 'Resume 2-second background sync'}
+            >
+              {autoSyncEnabled ? '2s LIVE' : 'PAUSED'}
+            </button>
           </div>
-          <p className="truncate">{syncStatusText}</p>
+          <div className="text-slate-500 space-y-0.5 pt-1 border-t border-slate-100">
+            <p className="flex items-center justify-between text-[10px]">
+              <span className="text-slate-400">Server:</span>
+              <span className="font-mono text-slate-600">{activeAccount?.imapHost || 'mail.pileandloop.com'}:993</span>
+            </p>
+            <p className="flex items-center justify-between text-[9px] text-slate-400">
+              <span>Pulses: {syncCount}</span>
+              <span>{lastSyncTime.toLocaleTimeString()}</span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -511,12 +616,15 @@ export const OutlookInbox: React.FC = () => {
                   required
                   value={replyBody}
                   onChange={(e) => setReplyBody(e.target.value)}
-                  placeholder="Type your response from hr@pileandloop.com... (Human review required before sending)"
+                  placeholder={`Type your response from ${activeAccount?.email || 'hr@pileandloop.com'}... (Human review required before sending)`}
                   className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500 bg-white"
                 />
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">Sender: hr@pileandloop.com via SMTP</span>
+                  <span className="text-[11px] text-slate-500 flex items-center space-x-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>Sender: <strong className="text-slate-700">{activeAccount?.email || 'hr@pileandloop.com'}</strong> via {activeAccount?.smtpHost || 'mail.pileandloop.com'}:{activeAccount?.smtpPort || 465} (TLS)</span>
+                  </span>
                   <Button size="sm" type="submit" loading={sendingReply}>
                     <Send className="w-3.5 h-3.5 mr-1.5" />
                     Review & Send Reply

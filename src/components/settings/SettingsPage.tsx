@@ -35,11 +35,30 @@ import {
   MapPin,
   RefreshCw,
   Sliders,
-  ExternalLink
+  ExternalLink,
+  Server,
+  Key,
+  Eye,
+  EyeOff,
+  Trash2,
+  Edit3,
+  Plus
 } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import {
+  getEmailAccounts,
+  saveEmailAccounts,
+  addEmailAccount,
+  updateEmailAccount,
+  deleteEmailAccount,
+  testMailConnection,
+  syncMailAccount,
+  EmailAccountConfig
+} from '../../services/emailService';
 
 export const SettingsPage: React.FC = () => {
   const { isSuperAdmin, isSupervisor } = useAuth();
+  const toast = useToast();
   const { company, updateCompanyProfile, applyPreset, resetToDefaults } = useCompanyProfile();
   const [activeTab, setActiveTab] = useState<'COMPANY' | 'RECRUITMENT' | 'INTERNSHIP' | 'EMAIL' | 'AI' | 'USERS' | 'INTEGRATIONS'>('COMPANY');
 
@@ -94,6 +113,113 @@ export const SettingsPage: React.FC = () => {
     jobTitle: 'HR Executive',
   });
   const [creatingUser, setCreatingUser] = useState(false);
+
+  // Email Accounts & Mail Server State
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccountConfig[]>(getEmailAccounts());
+  const [syncIntervalSeconds, setSyncIntervalSeconds] = useState<number>(2);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [testingAccountId, setTestingAccountId] = useState<string | null>(null);
+  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const [addEmailModalOpen, setAddEmailModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<EmailAccountConfig | null>(null);
+  const [emailForm, setEmailForm] = useState({
+    accountName: '',
+    email: '',
+    password: '',
+    imapHost: 'mail.pileandloop.com',
+    imapPort: 993,
+    imapSecure: true,
+    smtpHost: 'mail.pileandloop.com',
+    smtpPort: 465,
+    smtpSecure: true,
+    syncIntervalSeconds: 2,
+    isDefault: false,
+    isActive: true,
+    assignedDepartment: 'Recruitment & HR',
+  });
+
+  const togglePasswordVisibility = (accId: string) => {
+    setShowPasswordMap(prev => ({ ...prev, [accId]: !prev[accId] }));
+  };
+
+  const handleTestEmailHandshake = async (acc: EmailAccountConfig) => {
+    setTestingAccountId(acc.id);
+    try {
+      const res = await testMailConnection(acc);
+      if (res.success) {
+        toast.success('Connection Verified', res.message);
+      } else {
+        toast.error('Handshake Failed', res.message);
+      }
+    } catch (e: any) {
+      toast.error('Test Error', e.message);
+    } finally {
+      setTestingAccountId(null);
+    }
+  };
+
+  const handleSyncSingleAccount = async (acc: EmailAccountConfig) => {
+    setTestingAccountId(acc.id);
+    try {
+      const res = await syncMailAccount(acc);
+      toast.success('Mailbox Synced', res.message);
+      setEmailAccounts(getEmailAccounts());
+    } catch (e: any) {
+      toast.error('Sync Error', e.message);
+    } finally {
+      setTestingAccountId(null);
+    }
+  };
+
+  const handleSyncAllAccounts = async () => {
+    setSyncingAll(true);
+    try {
+      for (const acc of emailAccounts) {
+        await syncMailAccount(acc);
+      }
+      setEmailAccounts(getEmailAccounts());
+      toast.success('All Inboxes Synced', 'Synchronized all corporate accounts with mail.pileandloop.com.');
+    } catch (e: any) {
+      toast.error('Sync Error', e.message);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
+  const handleSaveEmailAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailForm.email.trim() || !emailForm.password.trim()) {
+      toast.error('Validation Error', 'Email and password are required.');
+      return;
+    }
+
+    try {
+      if (editingAccount) {
+        updateEmailAccount(editingAccount.id, emailForm);
+        toast.success('Account Updated', `Settings for "${emailForm.email}" updated successfully.`);
+      } else {
+        addEmailAccount(emailForm);
+        toast.success('Account Added', `Mailbox "${emailForm.email}" added to team inboxes.`);
+      }
+      setEmailAccounts(getEmailAccounts());
+      setAddEmailModalOpen(false);
+      setEditingAccount(null);
+    } catch (e: any) {
+      toast.error('Save Failed', e.message);
+    }
+  };
+
+  const handleDeleteAccount = (acc: EmailAccountConfig) => {
+    if (acc.isDefault && emailAccounts.length === 1) {
+      toast.warning('Cannot Delete', 'You must maintain at least one active primary HR mailbox.');
+      return;
+    }
+    if (window.confirm(`Delete email account ${acc.email}?`)) {
+      deleteEmailAccount(acc.id);
+      setEmailAccounts(getEmailAccounts());
+      toast.info('Account Removed', `Mailbox ${acc.email} has been removed.`);
+    }
+  };
 
   useEffect(() => {
     // Load settings from Firestore
@@ -294,9 +420,10 @@ export const SettingsPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('EMAIL')}
-          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'EMAIL' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'EMAIL' ? 'border-emerald-600 text-emerald-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <Mail className="w-3.5 h-3.5" /> cPanel Mail Config
+          <Mail className="w-3.5 h-3.5" /> Mail Servers &amp; Team Inboxes
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1" />
         </button>
         <button
           onClick={() => setActiveTab('AI')}
@@ -788,24 +915,370 @@ export const SettingsPage: React.FC = () => {
           </form>
         )}
 
-        {/* EMAIL SETTINGS */}
+        {/* EMAIL & MAIL SERVERS STUDIO */}
         {activeTab === 'EMAIL' && (
-          <div className="space-y-4 max-w-xl text-xs">
-            <div className="p-3 bg-sky-50 border border-sky-200 rounded-lg text-sky-900">
-              <p className="font-semibold">cPanel Server Mail Synchronization</p>
-              <p className="text-[11px] text-sky-700 mt-0.5">
-                Target mailbox: <strong>hr@pileandloop.com</strong> on host <strong>mail.pileandloop.com</strong>.
-              </p>
+          <div className="space-y-6 text-xs">
+            {/* Live cPanel Status Banner */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start space-x-3.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+                  <Server className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                      Corporate Mail Server &amp; Multi-Inbox Hub
+                    </h4>
+                    <span className="flex items-center px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-semibold border border-emerald-200 dark:border-emerald-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
+                      Live 2s Sync Active
+                    </span>
+                  </div>
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">
+                    Connected to <strong>mail.pileandloop.com</strong> on IMAP Port 993 (SSL) &amp; SMTP Port 465 (SSL). Real-time pulse synchronizes candidate replies, email notifications, and dispatch logs.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSyncAllAccounts}
+                  loading={syncingAll}
+                  className="bg-white hover:bg-slate-50"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                  Sync All Inboxes
+                </Button>
+                {isSupervisor && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      setEditingAccount(null);
+                      setEmailForm({
+                        accountName: '',
+                        email: '',
+                        password: '',
+                        imapHost: 'mail.pileandloop.com',
+                        imapPort: 993,
+                        imapSecure: true,
+                        smtpHost: 'mail.pileandloop.com',
+                        smtpPort: 465,
+                        smtpSecure: true,
+                        syncIntervalSeconds: 2,
+                        isDefault: false,
+                        isActive: true,
+                        assignedDepartment: 'Recruitment & HR',
+                      });
+                      setAddEmailModalOpen(true);
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Add Team Email Account
+                  </Button>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="block text-slate-700 font-medium mb-1">Scheduled Sync Interval</label>
-              <input
-                type="text"
-                disabled
-                value="Every 5 minutes (Automated cron)"
-                className="w-full p-2 border rounded bg-slate-50 text-slate-500 font-mono"
-              />
+
+            {/* Email Accounts List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">
+                  Configured Corporate Inboxes ({emailAccounts.length})
+                </h4>
+                <span className="text-[11px] text-slate-400">
+                  Background sync interval: <strong>{syncIntervalSeconds}s (Instant cPanel Sync)</strong>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {emailAccounts.map((acc) => {
+                  const isPwVisible = !!showPasswordMap[acc.id];
+                  const isTesting = testingAccountId === acc.id;
+
+                  return (
+                    <div
+                      key={acc.id}
+                      className={`p-5 rounded-xl border transition-all flex flex-col justify-between ${
+                        acc.isDefault
+                          ? 'bg-emerald-50/20 border-emerald-300 dark:border-emerald-800/80 shadow-xs'
+                          : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        {/* Card Header */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h5 className="font-bold text-slate-900 dark:text-white text-sm">{acc.accountName}</h5>
+                              {acc.isDefault && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300">
+                                  Default HR Mailbox
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-mono text-xs text-emerald-700 dark:text-emerald-400 mt-0.5 font-semibold">
+                              {acc.email}
+                            </p>
+                          </div>
+
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            {acc.assignedDepartment}
+                          </span>
+                        </div>
+
+                        {/* Credentials Details */}
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500">Password:</span>
+                            <div className="flex items-center space-x-1.5 font-mono">
+                              <span>{isPwVisible ? acc.password : '••••••••••••••••'}</span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(acc.id)}
+                                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                                title={isPwVisible ? 'Hide Password' : 'Show Password'}
+                              >
+                                {isPwVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-200 dark:border-slate-700">
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Incoming Server (IMAP):</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">
+                                {acc.imapHost}:{acc.imapPort} (SSL)
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 block text-[10px]">Outgoing Server (SMTP):</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">
+                                {acc.smtpHost}:{acc.smtpPort} (SSL)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sync Status Info */}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+                            Pulse: Every <strong>{acc.syncIntervalSeconds || 2}s</strong>
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-400">
+                            Last synced: {acc.lastSyncedAt ? new Date(acc.lastSyncedAt).toLocaleTimeString() : 'Active'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Action Buttons */}
+                      <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTestEmailHandshake(acc)}
+                            loading={isTesting}
+                            className="text-xs"
+                          >
+                            <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                            Test Connection
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleSyncSingleAccount(acc)}
+                            loading={isTesting}
+                            className="text-xs"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                            Sync Now
+                          </Button>
+                        </div>
+
+                        {isSupervisor && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingAccount(acc);
+                                setEmailForm({
+                                  accountName: acc.accountName,
+                                  email: acc.email,
+                                  password: acc.password,
+                                  imapHost: acc.imapHost,
+                                  imapPort: acc.imapPort,
+                                  imapSecure: acc.imapSecure,
+                                  smtpHost: acc.smtpHost,
+                                  smtpPort: acc.smtpPort,
+                                  smtpSecure: acc.smtpSecure,
+                                  syncIntervalSeconds: acc.syncIntervalSeconds,
+                                  isDefault: acc.isDefault,
+                                  isActive: acc.isActive,
+                                  assignedDepartment: acc.assignedDepartment,
+                                });
+                                setAddEmailModalOpen(true);
+                              }}
+                              title="Edit Mailbox Settings"
+                              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg cursor-pointer"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+
+                            {!acc.isDefault && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAccount(acc)}
+                                title="Delete Mailbox"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* ADD / EDIT EMAIL ACCOUNT MODAL */}
+            <Modal
+              isOpen={addEmailModalOpen}
+              onClose={() => {
+                setAddEmailModalOpen(false);
+                setEditingAccount(null);
+              }}
+              title={editingAccount ? `Edit Mailbox: ${editingAccount.email}` : 'Add Corporate Team Mailbox'}
+              maxWidth="lg"
+            >
+              <form onSubmit={handleSaveEmailAccount} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Account Display Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={emailForm.accountName}
+                      onChange={(e) => setEmailForm({ ...emailForm, accountName: e.target.value })}
+                      placeholder="e.g. Careers &amp; Inquiries"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Assigned Department</label>
+                    <input
+                      type="text"
+                      value={emailForm.assignedDepartment}
+                      onChange={(e) => setEmailForm({ ...emailForm, assignedDepartment: e.target.value })}
+                      placeholder="e.g. Talent Acquisition, Leadership"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      value={emailForm.email}
+                      onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                      placeholder="careers@pileandloop.com"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Email Password *</label>
+                    <input
+                      type="password"
+                      required
+                      value={emailForm.password}
+                      onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                      placeholder="••••••••••••"
+                      className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Incoming Server (IMAP)</label>
+                    <input
+                      type="text"
+                      value={emailForm.imapHost}
+                      onChange={(e) => setEmailForm({ ...emailForm, imapHost: e.target.value })}
+                      className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 font-mono text-[11px]"
+                    />
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-[10px] text-slate-400">Port:</span>
+                      <input
+                        type="number"
+                        value={emailForm.imapPort}
+                        onChange={(e) => setEmailForm({ ...emailForm, imapPort: Number(e.target.value) })}
+                        className="w-16 p-1 border rounded text-[11px] font-mono"
+                      />
+                      <span className="text-[10px] text-emerald-600 font-semibold">SSL/TLS</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">Outgoing Server (SMTP)</label>
+                    <input
+                      type="text"
+                      value={emailForm.smtpHost}
+                      onChange={(e) => setEmailForm({ ...emailForm, smtpHost: e.target.value })}
+                      className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 font-mono text-[11px]"
+                    />
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-[10px] text-slate-400">Port:</span>
+                      <input
+                        type="number"
+                        value={emailForm.smtpPort}
+                        onChange={(e) => setEmailForm({ ...emailForm, smtpPort: Number(e.target.value) })}
+                        className="w-16 p-1 border rounded text-[11px] font-mono"
+                      />
+                      <span className="text-[10px] text-emerald-600 font-semibold">SSL/TLS</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={emailForm.isDefault}
+                      onChange={(e) => setEmailForm({ ...emailForm, isDefault: e.target.checked })}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="text-slate-700 dark:text-slate-300">Set as Primary Default Mailbox</span>
+                  </label>
+
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={() => {
+                        setAddEmailModalOpen(false);
+                        setEditingAccount(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button size="sm" variant="primary" type="submit">
+                      {editingAccount ? 'Save Account' : 'Connect Mailbox'}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Modal>
           </div>
         )}
 

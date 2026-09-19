@@ -41,6 +41,7 @@ export interface EmailThread {
   unread: boolean;
   starred: boolean;
   archived: boolean;
+  folder?: string;
   createdAt: any;
   updatedAt: any;
 }

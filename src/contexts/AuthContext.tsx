@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
@@ -14,6 +14,10 @@ interface AuthContextType {
   isExecutive: boolean;
   isHrIntern: boolean;
   isHrStaff: boolean;
+  isHiringManager: boolean;
+  isRecruiter: boolean;
+  isFinance: boolean;
+  isAuditor: boolean;
   isTeamMemberOnly: boolean;
   canSendEmail: boolean;
   canViewCNIC: boolean;
@@ -84,11 +88,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSupervisor = isSuperAdmin || role === 'HR_SUPERVISOR';
   const isExecutive = isSupervisor || role === 'HR_EXECUTIVE';
   const isHrIntern = isExecutive || role === 'HR_INTERN';
-  const isHrStaff = ['SUPER_ADMIN', 'OWNER', 'HR_SUPERVISOR', 'HR_EXECUTIVE', 'HR_INTERN'].includes(role || '');
+  const isRecruiter = isSupervisor || role === 'TALENT_ACQUISITION';
+  const isHiringManager = isSupervisor || role === 'HIRING_MANAGER';
+  const isFinance = isSuperAdmin || role === 'FINANCE_OFFICER';
+  const isAuditor = role === 'EXTERNAL_AUDITOR';
+  const isHrStaff = ['SUPER_ADMIN', 'OWNER', 'HR_SUPERVISOR', 'HR_EXECUTIVE', 'HR_INTERN', 'TALENT_ACQUISITION'].includes(role || '');
   const isTeamMemberOnly = role === 'TEAM_MEMBER';
-  const canSendEmail = isSupervisor || isExecutive;
-  const canViewCNIC = isSupervisor || isSuperAdmin;
-  const canMakeHiringDecisions = isSupervisor || isSuperAdmin;
+  const canSendEmail = isSupervisor || isExecutive || isRecruiter;
+  const canViewCNIC = isSupervisor || isSuperAdmin || isFinance;
+  const canMakeHiringDecisions = isSupervisor || isSuperAdmin || isHiringManager;
 
   return (
     <AuthContext.Provider
@@ -102,6 +110,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isExecutive,
         isHrIntern,
         isHrStaff,
+        isHiringManager,
+        isRecruiter,
+        isFinance,
+        isAuditor,
         isTeamMemberOnly,
         canSendEmail,
         canViewCNIC,

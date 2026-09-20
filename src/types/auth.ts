@@ -4,6 +4,10 @@ export type UserRole =
   | 'HR_SUPERVISOR' 
   | 'HR_EXECUTIVE' 
   | 'HR_INTERN' 
+  | 'HIRING_MANAGER'
+  | 'TALENT_ACQUISITION'
+  | 'FINANCE_OFFICER'
+  | 'EXTERNAL_AUDITOR'
   | 'TEAM_MEMBER';
 
 export interface UserProfile {

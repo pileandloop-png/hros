@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
@@ -33,6 +33,7 @@ import { AuditLogPage } from './components/audit/AuditLogPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { CareersPage } from './components/careers/CareersPage';
 import { VerifyCertificate } from './components/verification/VerifyCertificate';
+import { AcceptInvitePage } from './components/auth/AcceptInvitePage';
 
 export const App: React.FC = () => {
   return (
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/invite" element={<AcceptInvitePage />} />
                 <Route path="/careers" element={<CareersPage />} />
                 <Route path="/verify/:certId" element={<VerifyCertificate />} />
 

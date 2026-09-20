@@ -42,7 +42,9 @@ import {
   EyeOff,
   Trash2,
   Edit3,
-  Plus
+  Plus,
+  Copy,
+  Send
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import {
@@ -55,6 +57,12 @@ import {
   syncMailAccount,
   EmailAccountConfig
 } from '../../services/emailService';
+import {
+  createTeamInvite,
+  getAllInvites,
+  revokeInvite,
+  TeamInvite
+} from '../../services/inviteService';
 
 export const SettingsPage: React.FC = () => {
   const { isSuperAdmin, isSupervisor } = useAuth();
@@ -113,6 +121,18 @@ export const SettingsPage: React.FC = () => {
     jobTitle: 'HR Executive',
   });
   const [creatingUser, setCreatingUser] = useState(false);
+
+  // Team Invite State
+  const [invitesList, setInvitesList] = useState<TeamInvite[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteSuccessUrl, setInviteSuccessUrl] = useState<string | null>(null);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    displayName: '',
+    role: 'HR_INTERN',
+    department: 'Human Resources',
+  });
 
   // Email Accounts & Mail Server State
   const [emailAccounts, setEmailAccounts] = useState<EmailAccountConfig[]>(getEmailAccounts());
@@ -231,8 +251,56 @@ export const SettingsPage: React.FC = () => {
 
     if (isSuperAdmin) {
       loadUsers();
+      loadInvites();
     }
   }, [isSuperAdmin]);
+
+  const loadInvites = () => {
+    const list = getAllInvites();
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setInvitesList(list);
+  };
+
+  const handleOpenInviteModal = () => {
+    setInviteSuccessUrl(null);
+    setInviteForm({
+      email: '',
+      displayName: '',
+      role: 'HR_INTERN',
+      department: 'Human Resources',
+    });
+    setInviteModalOpen(true);
+  };
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteForm.email) return;
+    setSendingInvite(true);
+    try {
+      const { inviteUrl } = await createTeamInvite(inviteForm);
+      setInviteSuccessUrl(inviteUrl);
+      loadInvites();
+      toast.success('Invitation Dispatched', `Invite sent to ${inviteForm.email} via hr@pileandloop.com.`);
+    } catch (err: any) {
+      toast.error('Invite Failed', err.message || 'Could not generate invitation.');
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const handleCopyInviteLink = (token: string) => {
+    const url = `${window.location.origin}/invite?token=${token}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Link Copied', 'Invitation link copied to clipboard.');
+  };
+
+  const handleRevokeInvite = (token: string) => {
+    if (window.confirm('Revoke this invitation? The link will no longer work.')) {
+      revokeInvite(token);
+      loadInvites();
+      toast.info('Revoked', 'Invitation revoked successfully.');
+    }
+  };
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -1317,10 +1385,15 @@ export const SettingsPage: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <Button size="sm" onClick={() => setAddUserModalOpen(true)}>
-                <UserPlus className="w-3.5 h-3.5 mr-1" />
-                Create Account Manually
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleOpenInviteModal} className="bg-sky-600 hover:bg-sky-700 text-white font-semibold">
+                  <UserPlus className="w-3.5 h-3.5 mr-1" />
+                  Invite Team Member (Link & Email)
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setAddUserModalOpen(true)}>
+                  Create Manually
+                </Button>
+              </div>
             </div>
 
             {/* PENDING ACCESS REQUESTS QUEUE */}
@@ -1439,6 +1512,10 @@ export const SettingsPage: React.FC = () => {
                             <option value="HR_SUPERVISOR">HR_SUPERVISOR</option>
                             <option value="HR_EXECUTIVE">HR_EXECUTIVE</option>
                             <option value="HR_INTERN">HR_INTERN</option>
+                            <option value="TALENT_ACQUISITION">TALENT_ACQUISITION</option>
+                            <option value="HIRING_MANAGER">HIRING_MANAGER</option>
+                            <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
+                            <option value="EXTERNAL_AUDITOR">EXTERNAL_AUDITOR</option>
                             <option value="TEAM_MEMBER">TEAM_MEMBER</option>
                           </select>
                         </td>
@@ -1462,6 +1539,100 @@ export const SettingsPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* WORKSPACE INVITATIONS QUEUE */}
+            <div className="space-y-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">Workspace Invitations ({invitesList.length})</h3>
+                  <span className="text-[11px] text-slate-500">
+                    7-day secure tokens with automatic cPanel SMTP dispatch from hr@pileandloop.com
+                  </span>
+                </div>
+                <Button size="sm" onClick={handleOpenInviteModal} className="bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs">
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Invite New Member
+                </Button>
+              </div>
+
+              {invitesList.length === 0 ? (
+                <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-slate-400">
+                  <Mail className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
+                  <p className="font-medium text-slate-600">No invitations issued yet</p>
+                  <p className="text-[11px] mt-0.5">Click "Invite Team Member" to generate and email a registration link with allocated role.</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                      <tr>
+                        <th className="p-3">Invitee</th>
+                        <th className="p-3">Assigned Role</th>
+                        <th className="p-3">Department</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Created / Expires</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {invitesList.map((inv) => (
+                        <tr key={inv.token} className="hover:bg-slate-50">
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900 block">{inv.displayName}</span>
+                            <span className="text-[11px] font-mono text-slate-500">{inv.email}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-sky-50 text-sky-700 font-semibold border border-sky-100">
+                              {inv.role}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-600">{inv.department || 'General'}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              inv.status === 'ACCEPTED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : inv.status === 'REVOKED'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {inv.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-500 text-[11px]">
+                            <div>Sent: {new Date(inv.createdAt).toLocaleDateString()}</div>
+                            <div className="text-[10px] text-slate-400">Exp: {new Date(inv.expiresAt).toLocaleDateString()}</div>
+                          </td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyInviteLink(inv.token)}
+                                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[11px] font-semibold flex items-center gap-1 border border-slate-200 cursor-pointer"
+                                title="Copy invitation link"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copy Link
+                              </button>
+                              {inv.status === 'PENDING' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevokeInvite(inv.token)}
+                                  className="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded text-[11px] font-semibold flex items-center gap-1 border border-red-200 cursor-pointer"
+                                  title="Revoke invitation"
+                                >
+                                  <X className="w-3 h-3" />
+                                  Revoke
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1592,6 +1763,10 @@ export const SettingsPage: React.FC = () => {
               <option value="HR_SUPERVISOR">HR Supervisor</option>
               <option value="HR_EXECUTIVE">HR Executive</option>
               <option value="HR_INTERN">HR Intern</option>
+              <option value="TALENT_ACQUISITION">Talent Acquisition / Recruiter</option>
+              <option value="HIRING_MANAGER">Hiring Manager / Department Head</option>
+              <option value="FINANCE_OFFICER">Finance / Payroll Officer</option>
+              <option value="EXTERNAL_AUDITOR">External Auditor</option>
               <option value="TEAM_MEMBER">Team Member / Intern</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>
@@ -1607,6 +1782,113 @@ export const SettingsPage: React.FC = () => {
             <Button size="sm" type="submit" loading={creatingUser}>Create Account</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Invite Team Member Modal */}
+      <Modal isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)} title="Invite Team Member (Link & Email)" maxWidth="md">
+        {inviteSuccessUrl ? (
+          <div className="space-y-4 py-3 text-xs">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <div className="text-center space-y-1">
+              <h4 className="font-bold text-slate-900 text-sm">Invitation Generated & Sent!</h4>
+              <p className="text-slate-600 text-[11px]">
+                An invitation email has been dispatched to <strong>{inviteForm.email}</strong> via corporate SMTP (<span className="font-mono">hr@pileandloop.com</span>).
+              </p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+              <label className="block text-[11px] font-semibold text-slate-700">Direct Invitation Link (Expires in 7 days):</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteSuccessUrl}
+                  className="w-full p-2 border border-slate-200 rounded bg-white font-mono text-[11px] text-slate-700 select-all"
+                />
+                <Button size="sm" onClick={() => handleCopyInviteLink(inviteSuccessUrl.split('token=')[1] || '')} className="bg-sky-600 text-white shrink-0">
+                  <Copy className="w-3.5 h-3.5 mr-1" />
+                  Copy
+                </Button>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button size="sm" onClick={() => setInviteModalOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSendInvite} className="space-y-3 text-xs">
+            <div className="p-2.5 bg-sky-50 border border-sky-200 rounded-lg text-sky-900 text-[11px] leading-relaxed">
+              Invited members will receive an official activation email from <strong>hr@pileandloop.com</strong> with a secure link to set their password.
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Full Name *</label>
+              <input
+                type="text"
+                required
+                value={inviteForm.displayName}
+                onChange={(e) => setInviteForm({ ...inviteForm, displayName: e.target.value })}
+                placeholder="e.g. Noreen Akhtar"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Email Address *</label>
+              <input
+                type="email"
+                required
+                value={inviteForm.email}
+                onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                placeholder="noreen@example.com"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Assigned RBAC Role *</label>
+              <select
+                value={inviteForm.role}
+                onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
+                className="w-full p-2 border rounded bg-white font-medium"
+              >
+                <option value="HR_INTERN">HR Intern (Recruitment & Sourcing)</option>
+                <option value="HR_EXECUTIVE">HR Executive (Interviews & Drafting)</option>
+                <option value="HR_SUPERVISOR">HR Supervisor (Approvals & Management)</option>
+                <option value="TALENT_ACQUISITION">Talent Acquisition / Recruiter</option>
+                <option value="HIRING_MANAGER">Hiring Manager / Department Head</option>
+                <option value="FINANCE_OFFICER">Finance / Payroll Officer</option>
+                <option value="EXTERNAL_AUDITOR">External Auditor</option>
+                <option value="TEAM_MEMBER">Team Member / Intern</option>
+                <option value="SUPER_ADMIN">Super Administrator (Full Governance)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-medium mb-1">Department</label>
+              <input
+                type="text"
+                value={inviteForm.department}
+                onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
+                placeholder="Human Resources"
+                className="w-full p-2 border rounded"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+              <Button size="sm" variant="outline" type="button" onClick={() => setInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" type="submit" loading={sendingInvite} className="bg-sky-600 hover:bg-sky-700 text-white">
+                <Send className="w-3.5 h-3.5 mr-1" />
+                Send Invite Email & Generate Link
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

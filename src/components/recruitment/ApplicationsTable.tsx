@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, getDocs, doc, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,8 +18,12 @@ import {
   CheckSquare,
   Square,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  Users,
+  Sparkles
 } from 'lucide-react';
+import { MarketingLeadsModal } from './MarketingLeadsModal';
+import { MassAiOutreachModal } from './MassAiOutreachModal';
 
 const STAGE_OPTIONS: ApplicationStage[] = [
   'NEW_APPLICATION',
@@ -58,6 +62,8 @@ export const ApplicationsTable: React.FC = () => {
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [marketingModalOpen, setMarketingModalOpen] = useState(false);
+  const [massAiModalOpen, setMassAiModalOpen] = useState(false);
 
   // Stage transition confirmation modal
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -184,6 +190,25 @@ export const ApplicationsTable: React.FC = () => {
           <p className="text-xs text-slate-500 mt-0.5">Filter, review, and progress recruitment candidates</p>
         </div>
         <div className="flex items-center space-x-2">
+          {selectedIds.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => setMassAiModalOpen(true)}
+              className="bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-sm flex items-center gap-1.5 cursor-pointer animate-pulse"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              1-Click Mass AI Outreach ({selectedIds.length})
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setMarketingModalOpen(true)}
+            className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 font-semibold cursor-pointer"
+          >
+            <Users className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            Marketing Leads Scanner
+          </Button>
           <Button size="sm" variant="outline" onClick={handleExportCsv}>
             <Download className="w-3.5 h-3.5 mr-1.5" />
             Export CSV
@@ -359,6 +384,23 @@ export const ApplicationsTable: React.FC = () => {
           loading={actionLoading}
         />
       )}
+      {/* Marketing Leads Scanner & Exporter Modal */}
+      <MarketingLeadsModal
+        isOpen={marketingModalOpen}
+        onClose={() => setMarketingModalOpen(false)}
+        applications={applications}
+      />
+
+      {/* 1-Click Mass AI Outreach Campaign Modal */}
+      <MassAiOutreachModal
+        isOpen={massAiModalOpen}
+        onClose={() => setMassAiModalOpen(false)}
+        selectedApplications={applications.filter((a) => selectedIds.includes(a.applicationId))}
+        onComplete={() => {
+          loadData();
+          setSelectedIds([]);
+        }}
+      />
     </div>
   );
 };

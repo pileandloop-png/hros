@@ -19,8 +19,12 @@ import {
   Lock,
   ExternalLink,
   ChevronLeft,
-  FileCheck
+  FileCheck,
+  Eye,
+  Award
 } from 'lucide-react';
+import { InAppCvViewer } from './InAppCvViewer';
+import { InterviewScorecardModal } from './InterviewScorecardModal';
 
 export const CandidateProfile: React.FC = () => {
   const { candidateId } = useParams<{ candidateId: string }>();
@@ -62,6 +66,9 @@ export const CandidateProfile: React.FC = () => {
 
   // Offer Letter modal
   const [offerModalOpen, setOfferModalOpen] = useState(false);
+
+  // Interview Scorecard modal
+  const [scorecardModalOpen, setScorecardModalOpen] = useState(false);
 
   const loadAllCandidateData = async () => {
     if (!candidateId) return;
@@ -273,6 +280,16 @@ export const CandidateProfile: React.FC = () => {
               </Button>
             )}
 
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setActiveTab('DOCUMENTS')}
+              className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 font-semibold cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
+              In-App CV & Screening
+            </Button>
+
             <Button size="sm" variant="secondary" onClick={() => {
               setEmailSubject(`Pile & Loop: Follow-up on your application`);
               setEmailModalOpen(true);
@@ -280,6 +297,26 @@ export const CandidateProfile: React.FC = () => {
             }}>
               <Sparkles className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
               AI Reply Draft
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setScorecardModalOpen(true)}
+              className="bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 font-semibold cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+              Scorecard
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setOfferModalOpen(true)}
+              className="bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 font-semibold cursor-pointer"
+            >
+              <FileCheck className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+              Offer Letter
             </Button>
 
             <Button size="sm" variant="outline" onClick={() => setStageModalOpen(true)}>
@@ -361,20 +398,51 @@ export const CandidateProfile: React.FC = () => {
                 </a>
               </div>
             )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 border-b pb-2">Application Snapshot</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <span className="text-slate-400">Position:</span>
+                <span className="font-semibold text-slate-800">{selectedApp?.positionAppliedFor || 'Internship'}</span>
+
+                <span className="text-slate-400">Current Stage:</span>
+                <Badge variant="info">{selectedApp?.currentStage}</Badge>
+
+                <span className="text-slate-400">Applied Date:</span>
+                <span className="text-slate-700">{selectedApp ? new Date((selectedApp as any).appliedAt || (selectedApp as any).appliedDate || (selectedApp as any).createdAt || Date.now()).toLocaleDateString() : '—'}</span>
+
+                <span className="text-slate-400">Source:</span>
+                <span className="text-slate-700">{selectedApp?.source || 'Direct'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 border-b pb-2">Candidate Details</h3>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <span className="text-slate-400">Email:</span>
+                <span className="text-slate-800 font-mono">{candidate.personalEmail}</span>
+
+                <span className="text-slate-400">Phone:</span>
+                <span className="text-slate-800 font-mono">{candidate.phone || 'None'}</span>
+
+                <span className="text-slate-400">Location:</span>
+                <span className="text-slate-700">{candidate.city || 'Remote'}</span>
+
+                <span className="text-slate-400">University:</span>
+                <span className="text-slate-700">{(candidate as any).instituteName || candidate.education || 'Not specified'}</span>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
         {activeTab === 'APPLICATION' && (
-          <div className="space-y-4 text-xs">
-            <h3 className="text-sm font-bold text-slate-900">Application Parameters</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Application Meta</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <span className="text-slate-400">Position Applied For:</span>
-                <p className="font-semibold text-slate-800">{selectedApp?.positionAppliedFor}</p>
-              </div>
-              <div>
-                <span className="text-slate-400">Current Stage:</span>
-                <p className="font-semibold text-slate-800">{selectedApp?.currentStage}</p>
+                <span className="text-slate-400">Application ID:</span>
+                <p className="font-mono text-slate-700">{selectedApp?.applicationId}</p>
               </div>
               <div>
                 <span className="text-slate-400">Follow-up Status:</span>
@@ -388,32 +456,35 @@ export const CandidateProfile: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'DOCUMENTS' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Candidate Documents</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+        {(activeTab === 'DOCUMENTS' || activeTab === 'SCREENING') && (
+          <div className="space-y-6">
+            {/* In-App CV Viewer, Indeed Viewer, OCR & AI Screening Engine */}
+            <InAppCvViewer
+              candidate={candidate}
+              application={selectedApp}
+              onStageUpdated={loadAllCandidateData}
+            />
+
+            {/* Government ID Verification */}
+            <div className="pt-4 border-t border-slate-200">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Sensitive Identity Verification
+              </h4>
               <div className="p-3.5 border rounded-lg border-slate-200 bg-slate-50 flex items-center justify-between">
                 <div>
-                  <h5 className="text-xs font-semibold text-slate-800">CNIC Government ID</h5>
-                  <span className="text-[11px] text-slate-500">Sensitive Identity Document</span>
+                  <h5 className="text-xs font-semibold text-slate-800">CNIC Government ID Document</h5>
+                  <span className="text-[11px] text-slate-500">Official Identity Record</span>
                 </div>
                 {canViewCNIC ? (
-                  <Badge variant="success">Authorized</Badge>
+                  <Badge variant="success">Authorized Access</Badge>
                 ) : (
                   <div className="flex items-center space-x-1 text-rose-600 text-[11px] font-medium">
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Restricted</span>
+                    <span>Restricted to Authorized HR</span>
                   </div>
                 )}
               </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'SCREENING' && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Screening Status</h3>
-            <p className="text-xs text-slate-600">Stage: {selectedApp?.currentStage}</p>
           </div>
         )}
 
@@ -638,6 +709,19 @@ export const CandidateProfile: React.FC = () => {
             alert(`Offer accepted and signed on ${new Date(signedAt).toLocaleDateString()}!`);
             loadAllCandidateData();
           }}
+        />
+      )}
+
+      {/* Interview Evaluation Scorecard Modal */}
+      {candidate && (
+        <InterviewScorecardModal
+          isOpen={scorecardModalOpen}
+          onClose={() => setScorecardModalOpen(false)}
+          candidateId={candidate.candidateId || (candidate as any).id}
+          candidateName={candidate.fullName}
+          applicationId={selectedApp?.applicationId}
+          positionTitle={selectedApp?.positionAppliedFor}
+          onScorecardSaved={loadAllCandidateData}
         />
       )}
     </div>

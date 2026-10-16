@@ -382,5 +382,161 @@ export const initialSeedData: SeedCollectionMap = {
       details: "Super Admin account initialized for pileandloop@gmail.com.",
       timestamp: new Date(Date.now() - 1 * 3600000).toISOString()
     }
+  },
+  emailThreads: {
+    "th-indeed-usman": {
+      id: "th-indeed-usman",
+      threadId: "th-indeed-usman",
+      subject: "Indeed Application: Muhammad Usman - Junior Web Developer",
+      candidateId: null,
+      category: "New Application",
+      assignedTo: null,
+      participantEmails: ["m.usman.dev@indeedmail.com", "hr@pileandloop.com"],
+      messageCount: 1,
+      lastMessageSnippet: "Applicant Name: Muhammad Usman | Position: Junior Web Developer | Education: ICS / Intermediate in Computer Science | Status: New application from Indeed",
+      lastMessageAt: new Date(Date.now() - 45 * 60000).toISOString(),
+      unread: true,
+      starred: true,
+      archived: false,
+      folder: "INBOX",
+      createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
+      updatedAt: new Date(Date.now() - 45 * 60000).toISOString()
+    },
+    "th-indeed-zainab": {
+      id: "th-indeed-zainab",
+      threadId: "th-indeed-zainab",
+      subject: "Indeed Application: Zainab Malik - Full-Stack Developer Intern",
+      candidateId: null,
+      category: "New Application",
+      assignedTo: null,
+      participantEmails: ["zainab.malik@indeedmail.com", "hr@pileandloop.com"],
+      messageCount: 1,
+      lastMessageSnippet: "Applicant Name: Zainab Malik | Position: Full-Stack Developer Intern | Education: BS Computer Science (FAST NUCES) | Status: Verified degree qualified",
+      lastMessageAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+      unread: false,
+      starred: false,
+      archived: false,
+      folder: "INBOX",
+      createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * 3600000).toISOString()
+    },
+    "th-candidate-bilal": {
+      id: "th-candidate-bilal",
+      threadId: "th-candidate-bilal",
+      subject: "Application for Full-Stack Developer Intern - Bilal Khan",
+      candidateId: "cand-1",
+      category: "New Application",
+      assignedTo: null,
+      participantEmails: ["bilal.khan@example.com", "hr@pileandloop.com"],
+      messageCount: 1,
+      lastMessageSnippet: "Dear Hiring Team, I am submitting my portfolio and resume for the Full-Stack Developer Intern vacancy at Pile & Loop.",
+      lastMessageAt: new Date(Date.now() - 5 * 3600000).toISOString(),
+      unread: false,
+      starred: true,
+      archived: false,
+      folder: "INBOX",
+      createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - 5 * 3600000).toISOString()
+    }
+  },
+  "emailThreads/th-indeed-usman/messages": {
+    "msg-usman-1": {
+      id: "msg-usman-1",
+      messageId: "msg-usman-1",
+      smtpMessageId: "<indeed-app-usman-2026@indeed.com>",
+      threadId: "th-indeed-usman",
+      from: "messages-noreply@indeed.com",
+      to: ["hr@pileandloop.com"],
+      subject: "Indeed Application: Muhammad Usman - Junior Web Developer",
+      textBody: `Applicant Name: Muhammad Usman
+Position: Junior Web Developer
+Email: m.usman.dev@indeedmail.com
+Phone: +92 312 4567890
+Resume: https://employers.indeed.com/c#candidates/view?id=ind-usman-982
+
+Candidate Summary:
+Self-motivated web developer with 1 year of practical learning and 3 live projects using HTML, CSS, JavaScript, and React. Eager to join Pile & Loop.
+
+Education:
+• Intermediate in Computer Science (ICS) / FSc (BISE Lahore, 2024)
+• Secondary School Certificate (Matriculation Science, 2022)
+
+Skills:
+React, JavaScript, HTML, CSS, TailwindCSS, Git, Problem Solving`,
+      htmlBody: `<div style="font-family: sans-serif; font-size: 13px; color: #1e293b; line-height: 1.6;">
+<p><strong>Applicant Name:</strong> Muhammad Usman</p>
+<p><strong>Position:</strong> Junior Web Developer</p>
+<p><strong>Email:</strong> <a href="mailto:m.usman.dev@indeedmail.com">m.usman.dev@indeedmail.com</a></p>
+<p><strong>Phone:</strong> +92 312 4567890</p>
+<p><strong>Resume Link:</strong> <a href="https://employers.indeed.com/c#candidates/view?id=ind-usman-982" target="_blank">View Resume on Indeed</a></p>
+<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;"/>
+<p><strong>Candidate Summary:</strong><br/>Self-motivated web developer with 1 year of practical learning and 3 live projects using HTML, CSS, JavaScript, and React. Eager to join Pile & Loop.</p>
+<p><strong>Education:</strong><br/>• Intermediate in Computer Science (ICS) / FSc (BISE Lahore, 2024)<br/>• Secondary School Certificate (Matriculation Science, 2022)</p>
+<p><strong>Skills:</strong> React, JavaScript, HTML, CSS, TailwindCSS, Git, Problem Solving</p>
+</div>`,
+      direction: "INBOUND",
+      createdAt: new Date(Date.now() - 45 * 60000).toISOString()
+    }
+  },
+  "emailThreads/th-indeed-zainab/messages": {
+    "msg-zainab-1": {
+      id: "msg-zainab-1",
+      messageId: "msg-zainab-1",
+      smtpMessageId: "<indeed-app-zainab-2026@indeed.com>",
+      threadId: "th-indeed-zainab",
+      from: "messages-noreply@indeed.com",
+      to: ["hr@pileandloop.com"],
+      subject: "Indeed Application: Zainab Malik - Full-Stack Developer Intern",
+      textBody: `Applicant Name: Zainab Malik
+Position: Full-Stack Developer Intern
+Email: zainab.malik@indeedmail.com
+Phone: +92 333 7654321
+Resume: https://employers.indeed.com/c#candidates/view?id=ind-zainab-411
+
+Candidate Summary:
+Final year undergraduate student in Computer Science. Strong background in React, TypeScript, Node.js, and PostgreSQL.
+
+Education:
+• Bachelor of Science in Computer Science (BS CS) - FAST NUCES (2022-2026)
+• FSc Pre-Engineering (Punjab College, 2022)
+
+Skills:
+React, TypeScript, Node.js, Express, PostgreSQL, MongoDB, Git, REST APIs`,
+      htmlBody: `<div style="font-family: sans-serif; font-size: 13px; color: #1e293b; line-height: 1.6;">
+<p><strong>Applicant Name:</strong> Zainab Malik</p>
+<p><strong>Position:</strong> Full-Stack Developer Intern</p>
+<p><strong>Email:</strong> <a href="mailto:zainab.malik@indeedmail.com">zainab.malik@indeedmail.com</a></p>
+<p><strong>Phone:</strong> +92 333 7654321</p>
+<p><strong>Resume Link:</strong> <a href="https://employers.indeed.com/c#candidates/view?id=ind-zainab-411" target="_blank">View Resume on Indeed</a></p>
+<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;"/>
+<p><strong>Candidate Summary:</strong><br/>Final year undergraduate student in Computer Science. Strong background in React, TypeScript, Node.js, and PostgreSQL.</p>
+<p><strong>Education:</strong><br/>• Bachelor of Science in Computer Science (BS CS) - FAST NUCES (2022-2026)<br/>• FSc Pre-Engineering (Punjab College, 2022)</p>
+<p><strong>Skills:</strong> React, TypeScript, Node.js, Express, PostgreSQL, MongoDB, Git, REST APIs</p>
+</div>`,
+      direction: "INBOUND",
+      createdAt: new Date(Date.now() - 2 * 3600000).toISOString()
+    }
+  },
+  "emailThreads/th-candidate-bilal/messages": {
+    "msg-bilal-1": {
+      id: "msg-bilal-1",
+      messageId: "msg-bilal-1",
+      smtpMessageId: "<candidate-app-bilal@gmail.com>",
+      threadId: "th-candidate-bilal",
+      from: "bilal.khan@example.com",
+      to: ["hr@pileandloop.com"],
+      subject: "Application for Full-Stack Developer Intern - Bilal Khan",
+      textBody: `Dear Hiring Team,\n\nI am submitting my portfolio and resume for the Full-Stack Developer Intern vacancy at Pile & Loop. I have extensive experience building React + Node.js web applications.\n\nEducation:\nBS Computer Science - COMSATS University Lahore (2021-2025)\n\nSkills:\nReact, TypeScript, Node.js, TailwindCSS, Git\n\nLooking forward to your feedback.\n\nBest regards,\nBilal Khan`,
+      htmlBody: `<div style="font-family: sans-serif; font-size: 13px; color: #1e293b; line-height: 1.6;">
+<p>Dear Hiring Team,</p>
+<p>I am submitting my portfolio and resume for the Full-Stack Developer Intern vacancy at Pile & Loop. I have extensive experience building React + Node.js web applications.</p>
+<p><strong>Education:</strong><br/>BS Computer Science - COMSATS University Lahore (2021-2025)</p>
+<p><strong>Skills:</strong><br/>React, TypeScript, Node.js, TailwindCSS, Git</p>
+<p>Looking forward to your feedback.</p>
+<p>Best regards,<br/>Bilal Khan</p>
+</div>`,
+      direction: "INBOUND",
+      createdAt: new Date(Date.now() - 5 * 3600000).toISOString()
+    }
   }
 };

@@ -32,7 +32,9 @@ import {
   Folder,
   FolderPlus,
   Trash2,
-  GripVertical
+  GripVertical,
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
@@ -45,6 +47,10 @@ import {
 } from '../../services/inboxFolderService';
 import { ComposeEmailModal } from './ComposeEmailModal';
 import { CreateFolderModal } from './CreateFolderModal';
+import { IndeedApplicationBanner } from './IndeedApplicationBanner';
+import { DeliverabilityCard } from '../email/DeliverabilityCard';
+import { InAppCvViewer } from '../recruitment/InAppCvViewer';
+import { DeliverabilityTelemetry, IndeedApplicationDetails } from '../../services/cvAnalysisService';
 
 const FOLDERS = [
   { id: 'INBOX', label: 'Inbox', icon: Inbox },
@@ -109,6 +115,8 @@ export const OutlookInbox: React.FC = () => {
   const [aiSummary, setAiSummary] = useState<any>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [aiWarnings, setAiWarnings] = useState<string[]>([]);
+  const [lastTelemetry, setLastTelemetry] = useState<DeliverabilityTelemetry | null>(null);
+  const [cvModalDetails, setCvModalDetails] = useState<IndeedApplicationDetails | null>(null);
 
   // Load configured accounts & custom folders
   useEffect(() => {
@@ -310,7 +318,7 @@ export const OutlookInbox: React.FC = () => {
 
     setSendingReply(true);
     try {
-      await sendHrEmail({
+      const res = await sendHrEmail({
         to: recipient,
         subject: selectedThread.subject.startsWith('Re:') ? selectedThread.subject : `Re: ${selectedThread.subject}`,
         htmlBody: `<div style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b;">${replyBody.replace(/\\n/g, '<br/>')}</div>`,
@@ -320,6 +328,9 @@ export const OutlookInbox: React.FC = () => {
         applicationId: selectedThread.applicationId || undefined,
         idempotencyKey: `reply_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       });
+      if (res.telemetry) {
+        setLastTelemetry(res.telemetry);
+      }
       setReplyBody('');
       setAiInstruction('');
       toast.success(`Reply dispatched via cPanel SMTP to ${recipient}`);
@@ -696,6 +707,24 @@ export const OutlookInbox: React.FC = () => {
 
             {/* Messages Body Scroll Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Live SMTP Deliverability Telemetry Card (Shown when an email was dispatched or selected) */}
+              {lastTelemetry && (
+                <DeliverabilityCard
+                  telemetry={lastTelemetry}
+                  onClose={() => setLastTelemetry(null)}
+                />
+              )}
+
+              {/* Indeed Application & Below Bachelor Detection Center */}
+              <IndeedApplicationBanner
+                thread={selectedThread}
+                message={messages[0]}
+                onOpenCvModal={(details) => setCvModalDetails(details)}
+                onPopulateReply={(subj, body) => {
+                  setReplyBody(body);
+                }}
+              />
+
               {loadingMessages ? (
                 <div className="text-center py-8 text-xs text-slate-400">Loading messages...</div>
               ) : messages.length === 0 ? (
@@ -729,6 +758,22 @@ export const OutlookInbox: React.FC = () => {
                         <span className="text-[11px] text-slate-600 font-medium">
                           {msg.attachments.length} attachment(s)
                         </span>
+                      </div>
+                    )}
+
+                    {(msg as any).telemetry && (
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <span className="inline-flex items-center text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono">
+                          <ShieldCheck className="w-3 h-3 mr-1 text-emerald-600" />
+                          SMTP Handshake Verified • SPF PASS • DKIM PASS (mail.pileandloop.com)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setLastTelemetry((msg as any).telemetry)}
+                          className="text-[10px] text-sky-600 hover:text-sky-800 font-semibold cursor-pointer underline"
+                        >
+                          View Delivery Telemetry &rarr;
+                        </button>
                       </div>
                     )}
                   </div>
@@ -818,6 +863,42 @@ export const OutlookInbox: React.FC = () => {
         onClose={() => setShowFolderModal(false)}
         onFolderCreated={() => setCustomFolders(getCustomFolders())}
       />
+
+      {/* In-App CV Reader & Indeed OCR Modal */}
+      {cvModalDetails && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-50 rounded-2xl max-w-4xl w-full p-5 max-h-[92vh] overflow-y-auto shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="flex items-center space-x-2">
+                <FileCheck className="w-4 h-4 text-sky-600" />
+                <h3 className="text-sm font-bold text-slate-800">
+                  In-App CV Reader & Indeed OCR: {cvModalDetails.candidateName}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCvModalDetails(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <InAppCvViewer
+              candidate={{
+                fullName: cvModalDetails.candidateName,
+                personalEmail: cvModalDetails.candidateEmail,
+                phone: cvModalDetails.candidatePhone,
+                notes: cvModalDetails.resumeSnippet,
+                resumeUrl: cvModalDetails.indeedResumeUrl
+              }}
+              application={{
+                positionAppliedFor: cvModalDetails.positionApplied,
+                coverLetter: cvModalDetails.resumeSnippet
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

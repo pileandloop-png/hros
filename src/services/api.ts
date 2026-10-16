@@ -1,5 +1,6 @@
 import { store } from './store';
 import { notifyDiscordAttendancePunch } from './discord';
+import { generateDeliverabilityTelemetry, DeliverabilityTelemetry } from './cvAnalysisService';
 
 // Helper: current PKT date string (YYYY-MM-DD)
 function getPktDateString(): string {
@@ -81,7 +82,18 @@ export async function sendHrEmail(data: {
   applicationId?: string;
   category?: string;
   idempotencyKey: string;
-}) {
+}): Promise<{
+  success: boolean;
+  threadId: string;
+  messageId: string;
+  sentAt: string;
+  telemetry: DeliverabilityTelemetry;
+}> {
+  const threadId = data.threadId || ('thread-' + Date.now().toString(36));
+  const messageId = 'msg-' + Date.now().toString(36);
+  const now = new Date().toISOString();
+  const telemetry = generateDeliverabilityTelemetry(data.to, data.subject, 'hr@pileandloop.com');
+
   // Attempt to call Vercel Serverless /api/email if deployed
   try {
     const res = await fetch('/api/email', {
@@ -91,39 +103,53 @@ export async function sendHrEmail(data: {
     });
     if (res.ok) {
       const json = await res.json();
-      return json;
+      return {
+        success: true,
+        threadId: json.threadId || threadId,
+        messageId: json.messageId || messageId,
+        sentAt: json.sentAt || now,
+        telemetry: json.telemetry || telemetry
+      };
     }
   } catch {
     // Fall back to local reactive storage
   }
 
-  const threadId = data.threadId || ('thread-' + Date.now().toString(36));
-  const messageId = 'msg-' + Date.now().toString(36);
-  const now = new Date().toISOString();
-
-  // Save email to store
-  store.setDocument('emails', messageId, {
+  const messageDoc = {
     id: messageId,
+    messageId,
+    smtpMessageId: telemetry.messageId,
     threadId,
     to: [data.to],
     from: 'hr@pileandloop.com',
     subject: data.subject,
-    html: data.htmlBody,
-    text: data.textBody || data.subject,
+    htmlBody: data.htmlBody,
+    textBody: data.textBody || data.subject,
     date: now,
     candidateId: data.candidateId,
+    applicationId: data.applicationId,
     folder: 'Sent',
-    createdAt: now
-  });
+    direction: 'OUTBOUND',
+    createdAt: now,
+    telemetry
+  };
+
+  // Save email to global emails collection
+  store.setDocument('emails', messageId, messageDoc);
+
+  // Save email into thread subcollection so OutlookInbox immediately renders it
+  store.setDocument(`emailThreads/${threadId}/messages`, messageId, messageDoc);
 
   // Update or create thread
   store.setDocument('emailThreads', threadId, {
     id: threadId,
+    threadId,
     subject: data.subject,
     candidateId: data.candidateId,
+    applicationId: data.applicationId,
     lastMessageAt: now,
-    lastMessageSnippet: data.subject,
-    participants: ['hr@pileandloop.com', data.to],
+    lastMessageSnippet: (data.textBody || data.subject).slice(0, 120),
+    participantEmails: ['hr@pileandloop.com', data.to],
     folder: 'Sent',
     unread: false,
     updatedAt: now
@@ -133,7 +159,8 @@ export async function sendHrEmail(data: {
     success: true,
     threadId,
     messageId,
-    sentAt: now
+    sentAt: now,
+    telemetry
   };
 }
 

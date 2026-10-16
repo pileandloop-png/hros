@@ -14,7 +14,9 @@ import {
   Globe,
   Maximize2,
   Check,
-  HelpCircle
+  HelpCircle,
+  ShieldAlert,
+  GraduationCap
 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { sendHrEmail, transitionApplicationStage } from '../../services/api';
@@ -24,8 +26,10 @@ import {
   calculateScreeningMatch,
   generateInitialCandidateEmail,
   ParsedCvData,
-  ScreeningAnalysis
+  ScreeningAnalysis,
+  DeliverabilityTelemetry
 } from '../../services/cvAnalysisService';
+import { DeliverabilityCard } from '../email/DeliverabilityCard';
 
 interface InAppCvViewerProps {
   candidate: any;
@@ -64,11 +68,18 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
     )
   );
 
+  // Education Policy State
+  const [autoSkipBelowBachelor, setAutoSkipBelowBachelor] = useState<boolean>(
+    analysis.educationClassification.isBelowBachelor
+  );
+  const [manualOverride, setManualOverride] = useState<boolean>(false);
+
   // 1-Click Initial Email Composer State
   const [showEmailDraft, setShowEmailDraft] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [lastTelemetry, setLastTelemetry] = useState<DeliverabilityTelemetry | null>(null);
 
   // File Upload Handler with OCR extraction
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +101,8 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
         defaultRequiredSkills
       );
       setAnalysis(computed);
+      setAutoSkipBelowBachelor(computed.educationClassification.isBelowBachelor);
+      setManualOverride(false);
 
       // Also set CV URL to object URL if PDF
       if (file.type.includes('pdf')) {
@@ -98,7 +111,7 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
         setExternalUrlInput(objUrl);
       }
 
-      toast.success(`CV parsed successfully! Fit Score: ${computed.matchRatio}%`);
+      toast.success(`CV parsed successfully! Fit Score: ${computed.matchRatio}% (${computed.educationClassification.highestDegreeFound})`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to extract CV text');
     } finally {
@@ -116,52 +129,61 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
       defaultRequiredSkills
     );
     setAnalysis(computed);
+    setAutoSkipBelowBachelor(computed.educationClassification.isBelowBachelor);
     toast.success(`Screening ratio recalculated: ${computed.matchRatio}% (${computed.grade})`);
   };
 
   // 1-Click Generate Initial Email
-  const handleGenerateInitialEmail = () => {
+  const handleGenerateInitialEmail = (forcePoliteRejection: boolean = false) => {
+    const isRejection = forcePoliteRejection || (analysis.educationClassification.isBelowBachelor && !manualOverride);
     const draft = generateInitialCandidateEmail(
       candidate?.fullName || 'Candidate',
       application?.positionAppliedFor || 'Position',
-      analysis
+      analysis,
+      isRejection
     );
     setEmailSubject(draft.subject);
     setEmailBody(draft.body);
     setShowEmailDraft(true);
-    toast.info('Initial candidate email draft generated from screening analysis.');
+    toast.info(isRejection ? 'Generated degree requirement notice.' : 'Initial candidate screening email draft generated.');
   };
 
   // 1-Click Send Initial Email via cPanel SMTP
   const handleSendInitialEmail = async () => {
-    if (!candidate?.personalEmail) {
+    const targetEmail = candidate?.personalEmail || candidate?.email;
+    if (!targetEmail) {
       toast.error('Candidate email address is missing');
       return;
     }
 
     setSendingEmail(true);
     try {
-      await sendHrEmail({
-        to: candidate.personalEmail,
+      const res = await sendHrEmail({
+        to: targetEmail,
         subject: emailSubject,
         htmlBody: `<div style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b;">${emailBody.replace(/\n/g, '<br/>')}</div>`,
         textBody: emailBody,
-        candidateId: candidate.candidateId,
-        applicationId: application?.applicationId,
+        candidateId: candidate.candidateId || candidate.id,
+        applicationId: application?.applicationId || application?.id,
         idempotencyKey: `initial_email_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       });
 
+      // Save telemetry to render real-time delivery report
+      if (res.telemetry) {
+        setLastTelemetry(res.telemetry);
+      }
+
       // Automatically transition application stage to INITIAL_EMAIL_SENT
-      if (application?.applicationId) {
+      if (application?.applicationId || application?.id) {
         await transitionApplicationStage(
-          application.applicationId,
+          application.applicationId || application.id,
           'INITIAL_EMAIL_SENT',
-          'Initial screening email dispatched via cPanel SMTP'
+          'Initial email dispatched via cPanel SMTP'
         );
         if (onStageUpdated) onStageUpdated();
       }
 
-      toast.success(`Initial email sent to ${candidate.personalEmail} via hr@pileandloop.com!`);
+      toast.success(`Email dispatched via cPanel SMTP to ${targetEmail}!`);
       setShowEmailDraft(false);
     } catch (err: any) {
       toast.error(err.message || 'Failed to send initial email');
@@ -170,8 +192,18 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
     }
   };
 
+  const isBelowBachelor = analysis.educationClassification.isBelowBachelor;
+
   return (
     <div className="space-y-6">
+      {/* Live Deliverability Telemetry Card (Shown when an email was dispatched) */}
+      {lastTelemetry && (
+        <DeliverabilityCard
+          telemetry={lastTelemetry}
+          onClose={() => setLastTelemetry(null)}
+        />
+      )}
+
       {/* Top Banner: In-App Viewer & Screening Ratio Dashboard */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-3 border-b border-slate-100">
@@ -182,10 +214,10 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
               </span>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  In-App CV Reader & Screening Ratio Engine
+                  In-App CV Reader, Indeed OCR & Screening Engine
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Read applicant CV within the app, review Indeed profiles, check fit score, and send initial emails.
+                  Read applicant CV within the app, review Indeed profiles, audit education credentials, and send verified responses.
                 </p>
               </div>
             </div>
@@ -203,19 +235,35 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
               {parsingLoading ? 'Reading CV...' : 'Upload & Read CV'}
             </label>
 
-            <Button
-              size="sm"
-              onClick={handleGenerateInitialEmail}
-              className="bg-sky-600 hover:bg-sky-700 text-white font-semibold"
-            >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              1-Click AI Initial Email
-            </Button>
+            {isBelowBachelor && autoSkipBelowBachelor && !manualOverride ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setManualOverride(true);
+                  setAutoSkipBelowBachelor(false);
+                  handleGenerateInitialEmail(true);
+                }}
+                className="border-amber-300 text-amber-800 hover:bg-amber-50 font-semibold"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
+                Draft Degree Notice (Override)
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => handleGenerateInitialEmail(false)}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-semibold"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                1-Click AI Response
+              </Button>
+            )}
           </div>
         </div>
 
         {/* AI Screening Ratio Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           {/* Fit Score Card */}
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
@@ -236,17 +284,33 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
             }`} />
           </div>
 
+          {/* Education Tier Card */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Education Credential
+            </span>
+            <div className="flex items-center space-x-1.5 mt-1">
+              <GraduationCap className={`w-4 h-4 ${isBelowBachelor ? 'text-rose-500' : 'text-emerald-600'}`} />
+              <span className={`text-xs font-bold ${isBelowBachelor ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {isBelowBachelor ? 'Below Bachelor' : 'Bachelor+ Qualified'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 truncate mt-0.5">
+              {analysis.educationClassification.highestDegreeFound}
+            </p>
+          </div>
+
           {/* Recommendation Verdict */}
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 md:col-span-2">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               AI Recommendation
             </span>
-            <p className="text-xs font-semibold text-slate-800 mt-1">
+            <p className="text-xs font-semibold text-slate-800 mt-1 truncate">
               {analysis.verdictLabel}
             </p>
-            <div className="flex items-center space-x-2 mt-1.5">
-              <span className="text-[10px] text-slate-500">Position Target:</span>
-              <Badge variant="info">{application?.positionAppliedFor || 'Internship'}</Badge>
+            <div className="flex items-center space-x-1.5 mt-1">
+              <span className="text-[10px] text-slate-400">Target:</span>
+              <Badge variant="info">{application?.positionAppliedFor || 'Role'}</Badge>
             </div>
           </div>
 
@@ -263,6 +327,54 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
             </p>
           </div>
         </div>
+
+        {/* Below Bachelor Alert & Policy Toggle Banner */}
+        {isBelowBachelor && (
+          <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="text-xs font-bold text-amber-900">
+                  Below Bachelor Disqualification Detected: {analysis.educationClassification.highestDegreeFound}
+                </span>
+              </div>
+              <Badge variant="warning">Auto-Skip Recommended</Badge>
+            </div>
+
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              {analysis.educationClassification.reasoning}
+            </p>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1.5 border-t border-amber-200/60">
+              <label className="flex items-center space-x-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={autoSkipBelowBachelor}
+                  onChange={(e) => {
+                    setAutoSkipBelowBachelor(e.target.checked);
+                    if (e.target.checked) setManualOverride(false);
+                  }}
+                  className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-amber-950">
+                  Do Not Auto-Reply to this candidate (Suppression Filter)
+                </span>
+              </label>
+
+              <div className="flex items-center space-x-2">
+                {autoSkipBelowBachelor && !manualOverride ? (
+                  <span className="text-[10px] text-amber-700 font-medium">
+                    Email auto-dispatch is locked to protect recruiter time.
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-rose-700 font-bold">
+                    Manual override active: Custom notice can be dispatched.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Matched Skills & Strengths Pills */}
         <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -348,82 +460,46 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
       {/* Main Viewer Display Area */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
         {activeMode === 'DOCUMENT' && (
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="text-xs font-bold text-slate-800">
-                Candidate CV Preview: {candidate?.fullName}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                Source: {application?.source || 'Direct Application'}
-              </span>
-            </div>
-
-            {/* Document Content View */}
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200/80 font-sans space-y-4 max-h-[500px] overflow-y-auto">
-              <div className="border-b border-slate-200 pb-3">
-                <h4 className="text-lg font-bold text-slate-900">{candidate?.fullName}</h4>
-                <p className="text-xs text-slate-600 mt-0.5">
-                  {candidate?.personalEmail} • {candidate?.phone || 'No phone'} • {candidate?.city || 'Remote'}
+          <div className="h-[520px] bg-slate-100 flex flex-col items-center justify-center p-6 text-center">
+            {cvUrl && cvUrl.startsWith('blob:') ? (
+              <iframe
+                src={cvUrl}
+                title="CV Document Preview"
+                className="w-full h-full rounded border-0"
+              />
+            ) : (
+              <div className="max-w-md space-y-3">
+                <FileText className="w-12 h-12 text-slate-400 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-700">CV Document Ready for Review</h4>
+                <p className="text-xs text-slate-500">
+                  You can upload any candidate PDF/DOCX resume using the button above to run OCR and screening.
                 </p>
-              </div>
-
-              <div>
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Role Applied For
-                </h5>
-                <p className="text-xs font-semibold text-slate-800">
-                  {application?.positionAppliedFor || 'Software Engineer Intern'}
-                </p>
-              </div>
-
-              <div>
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Extracted Resume Content
-                </h5>
-                <div className="bg-white p-4 rounded-lg border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-mono text-[11px]">
-                  {rawText}
+                <div className="pt-2">
+                  <button
+                    onClick={() => setActiveMode('TEXT_OCR')}
+                    className="text-xs font-semibold text-sky-600 hover:text-sky-800 underline cursor-pointer"
+                  >
+                    View Extracted Plain Text & Education Analysis &rarr;
+                  </button>
                 </div>
               </div>
-
-              {/* Suggested Interview Questions based on CV */}
-              <div className="bg-sky-50/70 p-4 rounded-lg border border-sky-200/70 space-y-2">
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-sky-900">
-                  <HelpCircle className="w-3.5 h-3.5 text-sky-600" />
-                  <span>AI Suggested Screening Questions for this Candidate</span>
-                </div>
-                <ul className="list-disc list-inside space-y-1 text-xs text-sky-800">
-                  {analysis.suggestedInterviewQuestions.map((q, qIdx) => (
-                    <li key={qIdx}>{q}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
         {activeMode === 'BROWSER' && (
-          <div className="w-full h-[600px] relative bg-slate-100 flex flex-col">
-            <div className="p-2 bg-slate-800 text-white flex items-center justify-between text-xs px-4">
-              <div className="flex items-center space-x-2 truncate">
-                <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate font-mono text-[11px] text-slate-300">{cvUrl}</span>
-              </div>
-              <a
-                href={cvUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-400 hover:underline flex items-center space-x-1 shrink-0 ml-4"
-              >
-                <span>Open in Full Browser</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+          <div className="h-[520px] bg-white flex flex-col">
+            <div className="p-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600 font-mono">
+              <span className="truncate max-w-lg">{cvUrl}</span>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">
+                Secure In-App Sandbox
+              </span>
             </div>
-
             <iframe
               src={cvUrl}
-              title="In-App CV / Indeed Viewer"
-              className="w-full flex-1 border-none bg-white"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              title="Indeed In-App Sandbox"
+              className="flex-1 w-full border-0"
+              sandbox="allow-scripts allow-same-origin allow-forms"
             />
           </div>
         )}
@@ -431,22 +507,19 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
         {activeMode === 'TEXT_OCR' && (
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xs font-bold text-slate-800">Raw OCR Extracted Text</h4>
-                <p className="text-[11px] text-slate-400">You can edit or paste raw resume text here to update screening</p>
-              </div>
-              <Button size="sm" variant="secondary" onClick={handleRecalculateScreening}>
-                <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                Re-Analyze Text
+              <span className="text-xs font-bold text-slate-700">
+                OCR Extracted Document Content
+              </span>
+              <Button size="sm" variant="outline" onClick={handleRecalculateScreening}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1 text-sky-600" />
+                Recalculate Fit & Education
               </Button>
             </div>
-
             <textarea
-              rows={12}
+              rows={16}
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-lg text-xs font-mono bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-              placeholder="Paste or edit resume text..."
+              className="w-full text-xs font-mono p-3 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 leading-relaxed"
             />
           </div>
         )}
@@ -459,10 +532,12 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-sky-600" />
               <h4 className="text-sm font-bold text-slate-900">
-                1-Click Initial Screening Email (Auto-Generated from CV)
+                1-Click Tailored Response Composer
               </h4>
             </div>
-            <Badge variant="info">Ready to Dispatch via hr@pileandloop.com</Badge>
+            <Badge variant={isBelowBachelor && !manualOverride ? 'warning' : 'info'}>
+              {isBelowBachelor && !manualOverride ? 'Degree Prerequisite Notice' : 'Screening Invitation'}
+            </Badge>
           </div>
 
           <div className="space-y-3">
@@ -479,7 +554,7 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Email Body</label>
               <textarea
-                rows={8}
+                rows={9}
                 value={emailBody}
                 onChange={(e) => setEmailBody(e.target.value)}
                 className="w-full text-xs p-3 border border-slate-200 rounded-lg font-sans leading-relaxed"
@@ -488,7 +563,7 @@ export const InAppCvViewer: React.FC<InAppCvViewerProps> = ({
 
             <div className="flex items-center justify-between pt-2">
               <span className="text-[11px] text-slate-400">
-                Recipient: <strong>{candidate?.personalEmail}</strong> • Sender: <strong>hr@pileandloop.com</strong>
+                Recipient: <strong>{candidate?.personalEmail || candidate?.email}</strong> • Sender: <strong>hr@pileandloop.com</strong>
               </span>
               <div className="flex items-center space-x-2">
                 <Button size="sm" variant="ghost" onClick={() => setShowEmailDraft(false)}>

@@ -15,6 +15,16 @@ class PersistentStore {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.data = JSON.parse(stored);
+        // Ensure emailThreads and their messages are merged if missing
+        if (!this.data['emailThreads'] || Object.keys(this.data['emailThreads']).length === 0) {
+          this.data['emailThreads'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads'] || {}));
+          Object.keys(initialSeedData).forEach(key => {
+            if (key.startsWith('emailThreads/')) {
+              this.data[key] = JSON.parse(JSON.stringify(initialSeedData[key]));
+            }
+          });
+          this.save();
+        }
       } else {
         this.data = JSON.parse(JSON.stringify(initialSeedData));
         this.save();

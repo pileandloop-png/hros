@@ -215,7 +215,7 @@ export const CandidateProfile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-6">
       <button
         onClick={() => navigate('/recruitment/applications')}
         className="text-xs text-slate-500 hover:text-slate-900 flex items-center space-x-1 cursor-pointer"

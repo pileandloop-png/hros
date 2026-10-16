@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -8,14 +8,14 @@ import { NavigationProvider } from '../../contexts/NavigationContext';
 export const Layout: React.FC = () => {
   return (
     <NavigationProvider>
-      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      <div className="flex h-screen w-screen overflow-hidden bg-[#F8F9FA] text-slate-900 antialiased selection:bg-slate-900 selection:text-white">
         {/* Responsive Desktop Sidebar + Mobile Sidelider Drawer */}
         <Sidebar />
 
         {/* Main Content Area */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-6 pb-24 md:pb-6 scrollbar-thin touch-momentum">
+          <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-6 pb-24 md:pb-6 scrollbar-thin touch-momentum w-full">
             <Outlet />
           </main>
         </div>

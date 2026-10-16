@@ -66,7 +66,7 @@ export const HrTasksList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto">
+    <div className="w-full space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Internal HR Team Tasks</h2>

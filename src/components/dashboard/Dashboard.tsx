@@ -245,7 +245,7 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-6">
       {/* Welcome Banner & Attendance Quickbar */}
       <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-2xs flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -509,7 +509,7 @@ export const Dashboard: React.FC = () => {
                   liveAttendanceList.slice(0, 6).map((att: any) => (
                     <div key={att.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 text-xs">
                       <div className="flex items-center space-x-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-bold text-[10px]">
                           {att.userName ? att.userName[0].toUpperCase() : 'U'}
                         </div>
                         <div>

@@ -89,7 +89,7 @@ export const AttendanceAnalytics: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -282,7 +282,7 @@ export const AttendanceAnalytics: React.FC = () => {
                         className="w-8 h-8 rounded-full object-cover border border-emerald-500/80 shadow-2xs"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-bold flex items-center justify-center text-xs">
                         {r.userName ? r.userName[0].toUpperCase() : 'U'}
                       </div>
                     )}

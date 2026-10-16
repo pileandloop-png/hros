@@ -40,7 +40,7 @@ export const DuplicateReviewQueue: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="w-full space-y-4">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Duplicate Review Queue</h2>
         <p className="text-xs text-slate-500 mt-0.5">

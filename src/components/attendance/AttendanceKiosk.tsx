@@ -19,7 +19,9 @@ import {
   Users,
   ChevronRight,
   ArrowLeft,
-  Building2
+  Building2,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
@@ -40,6 +42,7 @@ export const AttendanceKiosk: React.FC = () => {
   const [scanMode, setScanMode] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmationNotice, setConfirmationNotice] = useState<string | null>(null);
+  const [isKioskFullscreen, setIsKioskFullscreen] = useState(Boolean(document.fullscreenElement));
 
   const todayKey = new Date().toISOString().split('T')[0];
 
@@ -48,6 +51,21 @@ export const AttendanceKiosk: React.FC = () => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Sync fullscreen state
+  useEffect(() => {
+    const handleFsChange = () => setIsKioskFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const toggleKioskFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   // Load Active People & Today's Attendance Records
   useEffect(() => {
@@ -71,7 +89,7 @@ export const AttendanceKiosk: React.FC = () => {
       setTodayRecords(map);
       // Sort recents by updatedAt desc
       recents.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
-      setRecentPunches(recents.slice(0, 6));
+      setRecentPunches(recents.slice(0, 8));
     });
 
     return () => unsub();
@@ -144,57 +162,78 @@ export const AttendanceKiosk: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-6rem)] bg-slate-950 text-slate-100 rounded-2xl p-6 lg:p-8 space-y-6 shadow-2xl border border-slate-900 select-none">
+    <div className="w-full min-h-[calc(100vh-6rem)] bg-white text-slate-900 rounded-3xl p-6 lg:p-8 space-y-6 shadow-sm border border-slate-200/80 select-none">
       {/* Top Station Header & Live PKT Clock */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200/80">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/attendance/live')}
-            className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200/70 transition cursor-pointer"
             title="Return to Live Attendance Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
+              <span className="p-1.5 rounded-lg bg-sky-50 text-sky-600 border border-sky-100">
                 <Building2 className="w-4 h-4" />
               </span>
-              <h1 className="text-lg font-black text-white tracking-wide">
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
                 Pile & Loop • Biometric Attendance Station
               </h1>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Office Entrance Kiosk • AI Facial Liveness & Anti-Spoof Verification
             </p>
           </div>
         </div>
 
-        {/* Digital Clock Display */}
-        <div className="bg-slate-900/90 px-5 py-2.5 rounded-2xl border border-slate-800 text-right flex items-center justify-between sm:justify-end space-x-4 shadow-inner">
-          <div className="text-left sm:text-right">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
-              Pakistan Standard Time (PKT)
-            </span>
-            <span className="text-xs text-slate-300 font-medium">
-              {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
-          <div className="font-mono text-2xl font-black text-cyan-400 tracking-wider">
-            {currentTime.toLocaleTimeString('en-US', { hour12: true })}
+        {/* Right Tools: Fullscreen Toggle & Live Clock */}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={toggleKioskFullscreen}
+            className="hidden sm:flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 transition cursor-pointer"
+            title="Toggle Fullscreen Tablet Mode"
+          >
+            {isKioskFullscreen ? (
+              <>
+                <Minimize2 className="w-4 h-4" />
+                <span>Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-4 h-4" />
+                <span>Tablet Fullscreen</span>
+              </>
+            )}
+          </button>
+
+          {/* Digital Clock Display */}
+          <div className="bg-slate-50 px-5 py-2.5 rounded-2xl border border-slate-200/80 text-right flex items-center justify-between sm:justify-end space-x-4 shadow-2xs">
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-semibold">
+                Pakistan Time (PKT)
+              </span>
+              <span className="text-xs text-slate-600 font-medium">
+                {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            <div className="font-mono text-2xl font-black text-slate-900 tracking-tight">
+              {currentTime.toLocaleTimeString('en-US', { hour12: true })}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Confirmation Notification Banner */}
       {confirmationNotice && (
-        <div className="p-4 bg-emerald-500/20 border border-emerald-500/50 rounded-2xl text-emerald-300 flex items-center space-x-3 animate-in fade-in slide-in-from-top-4">
-          <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 flex items-center space-x-3 animate-in fade-in slide-in-from-top-4 shadow-2xs">
+          <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
           <div className="flex-1">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
               Verification Confirmed
             </h4>
-            <p className="text-xs font-medium">{confirmationNotice}</p>
+            <p className="text-xs font-medium text-emerald-800">{confirmationNotice}</p>
           </div>
         </div>
       )}
@@ -202,10 +241,10 @@ export const AttendanceKiosk: React.FC = () => {
       {/* Main Kiosk Split Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Staff Directory Selector */}
-        <div className="lg:col-span-5 bg-slate-900/80 rounded-2xl border border-slate-800 p-4 space-y-3 flex flex-col h-[520px]">
+        <div className="lg:col-span-5 bg-slate-50/60 rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col h-[540px]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
-              <Users className="w-4 h-4 text-sky-400" />
+            <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+              <Users className="w-4 h-4 text-sky-600" />
               <span>Select Employee ({people.length})</span>
             </span>
             <span className="text-[10px] text-slate-400 font-mono">Touch name to punch</span>
@@ -213,13 +252,13 @@ export const AttendanceKiosk: React.FC = () => {
 
           {/* Quick Search */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Search by name, role or department..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-2xs transition"
             />
           </div>
 
@@ -238,40 +277,64 @@ export const AttendanceKiosk: React.FC = () => {
                   onClick={() => setSelectedPerson(person)}
                   className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'bg-cyan-500/10 border-cyan-500/60 shadow-lg shadow-cyan-950/50'
-                      : 'bg-slate-950/50 border-slate-800 hover:bg-slate-800/40'
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                      : 'bg-white border-slate-200/80 hover:bg-slate-100/70 text-slate-800 shadow-2xs'
                   }`}
                 >
                   <div className="flex items-center space-x-3 truncate">
-                    <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-white shrink-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                        isSelected
+                          ? 'bg-white/15 text-white'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}
+                    >
                       {person.fullName ? person.fullName[0].toUpperCase() : 'U'}
                     </div>
                     <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-200 truncate">{person.fullName}</h4>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <h4 className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                        {person.fullName}
+                      </h4>
+                      <p className={`text-[11px] truncate ${isSelected ? 'text-slate-300' : 'text-slate-500'}`}>
                         {person.designation || person.role} • {person.department}
                       </p>
                     </div>
                   </div>
 
-                  <div className="shrink-0 text-right">
+                  <div className="shrink-0 text-right ml-2">
                     {isCheckedIn && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                        isSelected
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
+                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      }`}>
                         Working
                       </span>
                     )}
                     {isOnBreak && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                        isSelected
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      }`}>
                         On Break
                       </span>
                     )}
                     {isCheckedOut && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                        isSelected
+                          ? 'bg-white/10 text-slate-300 border border-white/20'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}>
                         Completed
                       </span>
                     )}
                     {!att && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-900 text-slate-500">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
+                        isSelected
+                          ? 'bg-white/10 text-slate-400'
+                          : 'bg-slate-50 text-slate-400'
+                      }`}>
                         Not In
                       </span>
                     )}
@@ -283,23 +346,23 @@ export const AttendanceKiosk: React.FC = () => {
         </div>
 
         {/* Right Column: Facial Verification Action Pod */}
-        <div className="lg:col-span-7 bg-slate-900/80 rounded-2xl border border-slate-800 p-6 flex flex-col justify-between space-y-6">
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between space-y-6 shadow-2xs">
           {selectedPerson ? (
             <>
               {/* Selected Staff Profile Card */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-950/70 rounded-2xl border border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-50/70 rounded-2xl border border-slate-200/80">
                 <div className="flex items-center space-x-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-600 to-sky-400 p-0.5 shrink-0 shadow-lg">
-                    <div className="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center font-black text-xl text-white">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-700 p-0.5 shrink-0 shadow-xs">
+                    <div className="w-full h-full bg-white rounded-2xl flex items-center justify-center font-black text-xl text-slate-900">
                       {selectedPerson.fullName ? selectedPerson.fullName[0].toUpperCase() : 'U'}
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-white">{selectedPerson.fullName}</h3>
-                    <p className="text-xs text-cyan-400 font-mono mt-0.5">
+                    <h3 className="text-base font-bold text-slate-900">{selectedPerson.fullName}</h3>
+                    <p className="text-xs text-sky-700 font-mono mt-0.5 font-medium">
                       {selectedPerson.designation || selectedPerson.role}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-slate-500 mt-0.5">
                       {selectedPerson.department} • ID: {selectedPerson.id}
                     </p>
                   </div>
@@ -326,52 +389,52 @@ export const AttendanceKiosk: React.FC = () => {
               {/* Status Details / Session Metrics */}
               {activeRecord && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Check-In Time</span>
-                    <span className="font-mono text-sm font-bold text-emerald-400 mt-1 block">
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Check-In Time</span>
+                    <span className="font-mono text-sm font-bold text-emerald-700 mt-1 block">
                       {new Date(activeRecord.checkInAt || activeRecord.checkInTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span className="text-[9px] text-slate-500">
+                    <span className="text-[9px] text-slate-400">
                       {activeRecord.isLate ? `Late by ${activeRecord.lateMinutes}m` : 'On time'}
                     </span>
                   </div>
 
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Worked Duration</span>
-                    <span className="font-mono text-sm font-bold text-white mt-1 block">
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Worked Duration</span>
+                    <span className="font-mono text-sm font-bold text-slate-900 mt-1 block">
                       {activeRecord.netWorkedMinutes ? (activeRecord.netWorkedMinutes / 60).toFixed(1) + ' hrs' : 'Active'}
                     </span>
-                    <span className="text-[9px] text-slate-500">Target: 5.0h standard</span>
+                    <span className="text-[9px] text-slate-400">Target: 5.0h standard</span>
                   </div>
 
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Break Taken</span>
-                    <span className="font-mono text-sm font-bold text-amber-400 mt-1 block">
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Break Taken</span>
+                    <span className="font-mono text-sm font-bold text-amber-700 mt-1 block">
                       {activeRecord.breakMinutes || 0} mins
                     </span>
-                    <span className="text-[9px] text-slate-500">Paid rest interval</span>
+                    <span className="text-[9px] text-slate-400">Paid rest interval</span>
                   </div>
 
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Verification</span>
-                    <span className="font-mono text-xs font-bold text-cyan-400 mt-1 block truncate">
+                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Verification</span>
+                    <span className="font-mono text-xs font-bold text-sky-700 mt-1 block truncate">
                       {activeRecord.faceVerification?.confidenceScore
                         ? `${activeRecord.faceVerification.confidenceScore}% Face Match`
                         : 'Biometric Verified'}
                     </span>
-                    <span className="text-[9px] text-slate-500">Anti-spoof pass</span>
+                    <span className="text-[9px] text-slate-400">Anti-spoof pass</span>
                   </div>
                 </div>
               )}
 
               {/* Action Punch Buttons */}
-              <div className="p-6 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-4">
+              <div className="p-6 bg-slate-50/70 rounded-2xl border border-slate-200/80 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-                    <Scan className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                    <Scan className="w-4 h-4 text-sky-600" />
                     <span>Touch to Scan Face</span>
                   </span>
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-slate-500">
                     Camera captures photo for HR verification audit
                   </span>
                 </div>
@@ -386,11 +449,11 @@ export const AttendanceKiosk: React.FC = () => {
                         setShowFaceModal(true);
                       }}
                       disabled={actionLoading}
-                      className="w-full p-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-lg shadow-emerald-950/50 hover:scale-[1.02] transition-all cursor-pointer"
+                      className="w-full p-4.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-xs hover:shadow transition-all cursor-pointer"
                     >
                       <Camera className="w-7 h-7" />
                       <span className="text-sm">Scan Face & Check In</span>
-                      <span className="text-[10px] text-emerald-200 font-normal">
+                      <span className="text-[10px] text-emerald-100 font-normal">
                         Verify identity & record arrival
                       </span>
                     </button>
@@ -405,11 +468,11 @@ export const AttendanceKiosk: React.FC = () => {
                         setShowFaceModal(true);
                       }}
                       disabled={actionLoading}
-                      className="w-full p-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-lg shadow-rose-950/50 hover:scale-[1.02] transition-all cursor-pointer"
+                      className="w-full p-4.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-xs hover:shadow transition-all cursor-pointer"
                     >
                       <Camera className="w-7 h-7" />
                       <span className="text-sm">Scan Face & Check Out</span>
-                      <span className="text-[10px] text-rose-200 font-normal">
+                      <span className="text-[10px] text-slate-300 font-normal">
                         Verify identity & finish work day
                       </span>
                     </button>
@@ -421,11 +484,11 @@ export const AttendanceKiosk: React.FC = () => {
                       type="button"
                       onClick={handleStartBreak}
                       disabled={actionLoading}
-                      className="w-full p-4 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 border border-slate-700 hover:scale-[1.02] transition-all cursor-pointer"
+                      className="w-full p-4.5 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-xs hover:shadow transition-all cursor-pointer"
                     >
-                      <Coffee className="w-7 h-7 text-amber-400" />
+                      <Coffee className="w-7 h-7" />
                       <span className="text-sm">Take designated break</span>
-                      <span className="text-[10px] text-slate-400 font-normal">
+                      <span className="text-[10px] text-amber-100 font-normal">
                         Pause working session
                       </span>
                     </button>
@@ -436,11 +499,11 @@ export const AttendanceKiosk: React.FC = () => {
                       type="button"
                       onClick={handleEndBreak}
                       disabled={actionLoading}
-                      className="w-full p-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-lg shadow-amber-950/50 hover:scale-[1.02] transition-all cursor-pointer"
+                      className="w-full p-4.5 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center space-y-2 shadow-xs hover:shadow transition-all cursor-pointer"
                     >
                       <Clock className="w-7 h-7" />
                       <span className="text-sm">Resume Work Session</span>
-                      <span className="text-[10px] text-amber-200 font-normal">
+                      <span className="text-[10px] text-sky-100 font-normal">
                         End break & continue productive hours
                       </span>
                     </button>
@@ -449,42 +512,42 @@ export const AttendanceKiosk: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500 space-y-3">
-              <User className="w-12 h-12 text-slate-700" />
-              <h4 className="text-sm font-bold text-slate-400">Select an employee from the directory</h4>
-              <p className="text-xs text-slate-600 max-w-sm">
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-3">
+              <User className="w-12 h-12 text-slate-300" />
+              <h4 className="text-sm font-bold text-slate-700">Select an employee from the directory</h4>
+              <p className="text-xs text-slate-500 max-w-sm">
                 Choose your name on the left directory to initialize the high-precision facial biometric verification scanner.
               </p>
             </div>
           )}
 
           {/* Recent Biometric Punches Ticker */}
-          <div className="pt-2 border-t border-slate-800">
+          <div className="pt-2 border-t border-slate-200/80">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
               Recent Biometric Punches Today ({recentPunches.length})
             </span>
             <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-thin">
               {recentPunches.length === 0 ? (
-                <span className="text-[11px] text-slate-600">No punches recorded yet today.</span>
+                <span className="text-[11px] text-slate-400">No punches recorded yet today.</span>
               ) : (
                 recentPunches.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center space-x-2 bg-slate-950 px-2.5 py-1.5 rounded-xl border border-slate-800 shrink-0"
+                    className="flex items-center space-x-2 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200/80 shrink-0 shadow-2xs"
                   >
                     {p.faceVerification?.photoSnapshotUrl ? (
                       <img
                         src={p.faceVerification.photoSnapshotUrl}
                         alt="Face Snapshot"
-                        className="w-6 h-6 rounded-full object-cover border border-emerald-500/60"
+                        className="w-6 h-6 rounded-full object-cover border border-emerald-500"
                       />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-slate-800 text-[10px] font-bold text-white flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-slate-900 text-[10px] font-bold text-white flex items-center justify-center">
                         {p.userName ? p.userName[0].toUpperCase() : 'U'}
                       </div>
                     )}
                     <div className="text-[10px]">
-                      <span className="font-bold text-slate-300 block truncate max-w-[90px]">{p.userName}</span>
+                      <span className="font-bold text-slate-800 block truncate max-w-[90px]">{p.userName}</span>
                       <span className="text-[9px] text-slate-500 font-mono">
                         {new Date(p.checkInAt || p.checkInTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </span>

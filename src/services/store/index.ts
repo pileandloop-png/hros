@@ -25,6 +25,12 @@ class PersistentStore {
           });
           this.save();
         }
+
+        // Ensure attendance with biometric records is merged if missing
+        if (!this.data['attendance'] || Object.keys(this.data['attendance']).length === 0) {
+          this.data['attendance'] = JSON.parse(JSON.stringify(initialSeedData['attendance'] || {}));
+          this.save();
+        }
       } else {
         this.data = JSON.parse(JSON.stringify(initialSeedData));
         this.save();

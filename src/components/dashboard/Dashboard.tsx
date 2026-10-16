@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -16,16 +16,22 @@ import {
   UserX,
   Play,
   Coffee,
-  Square
+  Square,
+  Camera,
+  Scan,
+  ShieldCheck
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
-import { checkIn, startBreak, endBreak, checkOut } from '../../services/api';
+import { checkIn, startBreak, endBreak, checkOut, FaceVerificationData } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { FaceScanModal } from '../attendance/FaceScanModal';
+import { useToast } from '../../contexts/ToastContext';
 
 export const Dashboard: React.FC = () => {
   const { user, profile, isHrStaff, isTeamMemberOnly } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Metrics State
   const [metrics, setMetrics] = useState({
@@ -56,6 +62,10 @@ export const Dashboard: React.FC = () => {
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [checkoutSummary, setCheckoutSummary] = useState({ tasksCompleted: '', blockers: '', nextDayPlans: '' });
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Biometric Face Scan State
+  const [faceScanModalOpen, setFaceScanModalOpen] = useState(false);
+  const [faceScanMode, setFaceScanMode] = useState<'CHECK_IN' | 'CHECK_OUT'>('CHECK_IN');
 
   // Load HR Data
   useEffect(() => {
@@ -200,8 +210,35 @@ export const Dashboard: React.FC = () => {
       await checkOut(checkoutSummary);
       setCheckoutModalOpen(false);
       setCheckoutSummary({ tasksCompleted: '', blockers: '', nextDayPlans: '' });
+      toast.success('You have checked out for today.');
     } catch (err: any) {
-      alert(err.message || 'Check-out failed');
+      toast.error(err.message || 'Check-out failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFaceVerificationComplete = async (verification: FaceVerificationData) => {
+    setActionLoading(true);
+    setFaceScanModalOpen(false);
+    try {
+      if (faceScanMode === 'CHECK_IN') {
+        await checkIn(plannedTasksInput || 'Biometric Face-Scan Check-In', verification);
+        setPlannedTasksInput('');
+        toast.success('Face Scan Verified! You are now Checked In.');
+      } else {
+        await checkOut({
+          tasksCompleted: checkoutSummary.tasksCompleted || 'Daily work completed via Biometric verification',
+          blockers: checkoutSummary.blockers,
+          nextDayPlans: checkoutSummary.nextDayPlans,
+          faceVerification: verification
+        });
+        setCheckoutModalOpen(false);
+        setCheckoutSummary({ tasksCompleted: '', blockers: '', nextDayPlans: '' });
+        toast.success('Face Scan Verified! You are Checked Out.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Biometric verification punch failed');
     } finally {
       setActionLoading(false);
     }
@@ -221,19 +258,30 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Live Check-in Widget */}
-        <div className="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2.5 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
           {!activeSession ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 placeholder="What are your goals today?"
                 value={plannedTasksInput}
                 onChange={(e) => setPlannedTasksInput(e.target.value)}
-                className="text-xs px-3 py-1.5 border border-slate-300 rounded bg-white w-52 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="text-xs px-3 py-1.5 border border-slate-300 rounded bg-white w-48 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
-              <Button size="sm" variant="success" onClick={handleCheckIn} loading={actionLoading}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setFaceScanMode('CHECK_IN');
+                  setFaceScanModalOpen(true);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer shadow-xs"
+              >
+                <Camera className="w-3.5 h-3.5 mr-1" />
+                Scan Face to Check In
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCheckIn} loading={actionLoading} title="Standard Manual Check-In">
                 <Play className="w-3.5 h-3.5 mr-1" />
-                Check In
+                Manual
               </Button>
             </div>
           ) : (
@@ -255,12 +303,34 @@ export const Dashboard: React.FC = () => {
                 </Button>
               )}
 
-              <Button size="sm" variant="danger" onClick={() => setCheckoutModalOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setFaceScanMode('CHECK_OUT');
+                  setFaceScanModalOpen(true);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+              >
+                <Camera className="w-3.5 h-3.5 mr-1" />
+                Scan Face Out
+              </Button>
+
+              <Button size="sm" variant="outline" onClick={() => setCheckoutModalOpen(true)}>
                 <Square className="w-3.5 h-3.5 mr-1" />
-                Check Out
+                Notes Out
               </Button>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => navigate('/attendance/kiosk')}
+            className="text-[11px] text-cyan-600 hover:text-cyan-800 font-semibold flex items-center space-x-1 pl-2 border-l border-slate-200 cursor-pointer"
+            title="Open Entrance Biometric Tablet Kiosk"
+          >
+            <Scan className="w-3.5 h-3.5" />
+            <span>Entrance Kiosk</span>
+          </button>
         </div>
       </div>
 
@@ -576,6 +646,18 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Biometric Face Scan Modal */}
+      {faceScanModalOpen && (
+        <FaceScanModal
+          isOpen={faceScanModalOpen}
+          onClose={() => setFaceScanModalOpen(false)}
+          onVerified={handleFaceVerificationComplete}
+          mode={faceScanMode}
+          userName={profile?.displayName || user?.email || 'Team Member'}
+          plannedTasks={plannedTasksInput}
+        />
       )}
     </div>
   );

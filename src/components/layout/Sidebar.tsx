@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompanyProfile } from '../../contexts/CompanyContext';
@@ -19,7 +19,8 @@ import {
   FileSpreadsheet,
   UserX,
   X,
-  ExternalLink
+  ExternalLink,
+  Scan
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -77,6 +78,8 @@ export const Sidebar: React.FC = () => {
       icon: Clock,
       children: [
         { label: 'Live Attendance', path: '/attendance/live' },
+        { label: 'Biometric Kiosk', path: '/attendance/kiosk' },
+        { label: 'Attendance Analytics', path: '/attendance/analytics' },
         { label: 'Timesheets', path: '/attendance/timesheets' },
       ],
     },
@@ -129,6 +132,7 @@ export const Sidebar: React.FC = () => {
   const teamNav = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
     { label: 'My Attendance', path: '/attendance/my', icon: Clock },
+    { label: 'Biometric Kiosk', path: '/attendance/kiosk', icon: Scan },
     { label: 'My Timesheet', path: '/attendance/timesheets', icon: FileSpreadsheet },
     { label: 'Leave Requests', path: '/leave', icon: Calendar },
     { label: 'My Daily Log', path: '/work/daily-logs', icon: CheckSquare },

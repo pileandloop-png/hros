@@ -401,38 +401,68 @@ export async function closeVacancy(vacancyId: string) {
   };
 }
 
-// Attendance Services
-export async function checkIn(plannedTasks?: string) {
+// Attendance Services & Biometric Face Verification
+export interface FaceVerificationData {
+  verified: boolean;
+  photoSnapshotUrl: string;
+  confidenceScore: number;
+  antiSpoofVerified: boolean;
+  timestamp: string;
+  deviceInfo?: string;
+  punchMethod?: 'FACIAL_BIOMETRIC_VERIFIED' | 'KIOSK_FACE_SCAN' | 'MANUAL_WEB_PUNCH';
+}
+
+export async function checkIn(
+  plannedTasks?: string,
+  faceVerification?: FaceVerificationData,
+  customUser?: { uid: string; displayName: string; department?: string; role?: string }
+) {
   const dateKey = getPktDateString();
-  const activeUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin","displayName":"Staff Member"}');
+  const defaultUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin","displayName":"Staff Member"}');
+  const activeUser = customUser || defaultUser;
   const attendanceId = `att-${activeUser.uid}-${dateKey}`;
   const now = new Date().toISOString();
 
-  store.setDocument('attendance', attendanceId, {
+  const isLate = new Date().getHours() >= 9 && new Date().getMinutes() > 15;
+  const lateMinutes = Math.max(0, (new Date().getHours() * 60 + new Date().getMinutes()) - (9 * 60 + 15));
+
+  const record = {
     id: attendanceId,
     userId: activeUser.uid,
     userName: activeUser.displayName,
+    department: activeUser.department || 'Engineering',
+    role: activeUser.role || 'Team Member',
     date: dateKey,
+    dateKey: dateKey,
     checkInTime: now,
-    status: 'PRESENT',
+    checkInAt: now,
+    status: 'CHECKED_IN',
+    punchMethod: faceVerification?.punchMethod || (faceVerification ? 'FACIAL_BIOMETRIC_VERIFIED' : 'MANUAL_WEB_PUNCH'),
+    faceVerification: faceVerification || null,
     plannedTasks: plannedTasks || '',
     breakMinutes: 0,
+    totalWorkedMinutes: 0,
     netWorkedMinutes: 0,
+    isLate,
+    lateMinutes,
     createdAt: now,
     updatedAt: now
-  });
+  };
+
+  store.setDocument('attendance', attendanceId, record);
 
   const timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit' });
   notifyDiscordAttendancePunch(activeUser.displayName || 'Staff Member', 'CHECK_IN', timeStr)
     .catch(e => console.warn('Discord punch notify error:', e));
 
-  return { success: true, attendanceId, dateKey };
+  return { success: true, attendanceId, dateKey, record };
 }
 
-export async function startBreak() {
+export async function startBreak(customUserId?: string) {
   const dateKey = getPktDateString();
   const activeUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin"}');
-  const attendanceId = `att-${activeUser.uid}-${dateKey}`;
+  const uid = customUserId || activeUser.uid;
+  const attendanceId = `att-${uid}-${dateKey}`;
   const now = new Date().toISOString();
 
   store.updateDocument('attendance', attendanceId, {
@@ -444,10 +474,11 @@ export async function startBreak() {
   return { success: true, status: 'ON_BREAK' };
 }
 
-export async function endBreak() {
+export async function endBreak(customUserId?: string) {
   const dateKey = getPktDateString();
   const activeUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin"}');
-  const attendanceId = `att-${activeUser.uid}-${dateKey}`;
+  const uid = customUserId || activeUser.uid;
+  const attendanceId = `att-${uid}-${dateKey}`;
   const current = store.getCollection('attendance')[attendanceId];
   const now = new Date();
 
@@ -460,13 +491,13 @@ export async function endBreak() {
   const totalBreakMinutes = (current?.breakMinutes || 0) + additionalBreakMinutes;
 
   store.updateDocument('attendance', attendanceId, {
-    status: 'PRESENT',
+    status: 'CHECKED_IN',
     breakMinutes: totalBreakMinutes,
     currentBreakStart: null,
     updatedAt: now.toISOString()
   });
 
-  return { success: true, status: 'PRESENT', totalBreakMinutes };
+  return { success: true, status: 'CHECKED_IN', totalBreakMinutes };
 }
 
 export async function checkOut(data: {
@@ -474,14 +505,17 @@ export async function checkOut(data: {
   blockers?: string;
   nextDayPlans?: string;
   notes?: string;
+  faceVerification?: FaceVerificationData;
+  customUser?: { uid: string; displayName: string };
 }) {
   const dateKey = getPktDateString();
-  const activeUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin"}');
+  const defaultUser = JSON.parse(localStorage.getItem('hros_active_user') || '{"uid":"usr-admin","displayName":"Staff Member"}');
+  const activeUser = data.customUser || defaultUser;
   const attendanceId = `att-${activeUser.uid}-${dateKey}`;
   const current = store.getCollection('attendance')[attendanceId];
   const now = new Date();
 
-  const checkInTime = current?.checkInTime ? new Date(current.checkInTime) : new Date(now.getTime() - 8 * 3600000);
+  const checkInTime = current?.checkInTime || current?.checkInAt ? new Date(current.checkInTime || current.checkInAt) : new Date(now.getTime() - 8 * 3600000);
   const totalWorkedMinutes = Math.max(0, Math.round((now.getTime() - checkInTime.getTime()) / 60000));
   const breakMinutes = current?.breakMinutes || 0;
   const netWorkedMinutes = Math.max(0, totalWorkedMinutes - breakMinutes);
@@ -489,11 +523,13 @@ export async function checkOut(data: {
   store.updateDocument('attendance', attendanceId, {
     status: 'CHECKED_OUT',
     checkOutTime: now.toISOString(),
+    checkOutAt: now.toISOString(),
     totalWorkedMinutes,
     netWorkedMinutes,
     tasksCompleted: data.tasksCompleted || '',
     blockers: data.blockers || '',
     nextDayPlans: data.nextDayPlans || '',
+    faceVerificationCheckout: data.faceVerification || null,
     updatedAt: now.toISOString()
   });
 

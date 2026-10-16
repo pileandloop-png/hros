@@ -21,6 +21,8 @@ import { OnboardingList } from './components/onboarding/OnboardingList';
 import { PeopleDirectory } from './components/people/PeopleDirectory';
 import { LiveAttendance } from './components/attendance/LiveAttendance';
 import { Timesheets } from './components/attendance/Timesheets';
+import { AttendanceKiosk } from './components/attendance/AttendanceKiosk';
+import { AttendanceAnalytics } from './components/attendance/AttendanceAnalytics';
 import { LeavePage } from './components/leave/LeavePage';
 import { HrTasksList } from './components/work/HrTasksList';
 import { DailyLogsPage } from './components/work/DailyLogsPage';
@@ -86,6 +88,8 @@ export const App: React.FC = () => {
 
                   {/* Attendance & Timesheets */}
                   <Route path="attendance/live" element={<ProtectedRoute requireHr><LiveAttendance /></ProtectedRoute>} />
+                  <Route path="attendance/kiosk" element={<AttendanceKiosk />} />
+                  <Route path="attendance/analytics" element={<AttendanceAnalytics />} />
                   <Route path="attendance/timesheets" element={<Timesheets />} />
                   <Route path="attendance/my" element={<Timesheets />} />
 

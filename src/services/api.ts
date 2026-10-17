@@ -1,6 +1,13 @@
 import { store } from './store';
 import { notifyDiscordAttendancePunch } from './discord';
-import { generateDeliverabilityTelemetry, DeliverabilityTelemetry } from './cvAnalysisService';
+import {
+  generateDeliverabilityTelemetry,
+  DeliverabilityTelemetry,
+  generate1ClickInterviewDetails,
+  OneClickInterviewBookingParams,
+  OneClickInterviewBookingResult,
+  InboundEmailLeaveDetails
+} from './cvAnalysisService';
 
 // Helper: current PKT date string (YYYY-MM-DD)
 function getPktDateString(): string {
@@ -694,3 +701,199 @@ export async function completeOffboarding(data: {
 
   return { success: true };
 }
+
+export async function execute1ClickInterviewBooking(params: {
+  applicationId: string;
+  candidateId: string;
+  candidateName: string;
+  candidateEmail: string;
+  positionApplied: string;
+  mode: 'ONLINE' | 'PHYSICAL';
+  scheduledDate?: string;
+  timeSlot?: string;
+  interviewerName?: string;
+  meetingPlatform?: 'Google Meet' | 'Zoom' | 'Microsoft Teams' | 'Office Conference Room';
+  customNotes?: string;
+}) {
+  const booking = generate1ClickInterviewDetails(params);
+  
+  // 1. Save Interview record in store
+  const interviewRecord = {
+    interviewId: booking.interviewId,
+    id: booking.interviewId,
+    applicationId: params.applicationId,
+    candidateId: params.candidateId,
+    candidateName: params.candidateName,
+    candidateEmail: params.candidateEmail,
+    positionApplied: params.positionApplied,
+    scheduledDate: booking.scheduledDate,
+    scheduledStart: booking.timeSlot.split('-')[0]?.trim() || '11:00 AM',
+    scheduledEnd: booking.timeSlot.split('-')[1]?.trim() || '11:45 AM',
+    timezone: 'Asia/Karachi',
+    meetingPlatform: params.meetingPlatform || (params.mode === 'ONLINE' ? 'Google Meet' : 'Office Conference Room'),
+    meetingLink: booking.meetingLink,
+    locationDetails: booking.locationDetails,
+    mode: params.mode,
+    interviewerIds: ['usr-recruiter-1'],
+    interviewerName: params.interviewerName || 'Talent Acquisition Team',
+    status: 'SCHEDULED',
+    notes: params.customNotes || 'Automated 1-Click Fast-Forward Booking from ATS Screening Engine',
+    createdAt: new Date().toISOString()
+  };
+  store.setDocument('interviews', booking.interviewId, interviewRecord);
+
+  // 2. Advance Application Stage in ATS to INTERVIEW_SCHEDULED
+  store.updateDocument('applications', params.applicationId, {
+    currentStage: 'INTERVIEW_SCHEDULED',
+    decision: 'INTERVIEW_SCHEDULED',
+    interviewBooking: {
+      interviewId: booking.interviewId,
+      scheduledDate: booking.scheduledDate,
+      timeSlot: booking.timeSlot,
+      mode: params.mode,
+      meetingLinkOrLocation: booking.locationDetails,
+      dispatchedAt: new Date().toISOString(),
+      interviewer: params.interviewerName || 'Talent Acquisition Team'
+    },
+    updatedAt: new Date().toISOString()
+  });
+
+  // 3. Dispatch official email confirmation with deliverability telemetry
+  try {
+    await sendHrEmail({
+      to: params.candidateEmail,
+      subject: booking.emailSubject,
+      htmlBody: booking.emailHtmlBody,
+      textBody: booking.emailTextBody,
+      candidateId: params.candidateId,
+      applicationId: params.applicationId,
+      idempotencyKey: `interview_invite_${booking.interviewId}`
+    });
+  } catch (emailErr) {
+    console.warn('Interview confirmation email dispatch warning:', emailErr);
+  }
+
+  // 4. Log ATS Audit Trail
+  store.setDocument('auditLogs', `audit-${Date.now()}`, {
+    auditId: `audit-${Date.now()}`,
+    action: '1_CLICK_INTERVIEW_SCHEDULED',
+    entityType: 'INTERVIEW',
+    entityId: booking.interviewId,
+    actorName: 'AI Talent Dispatcher',
+    metadata: {
+      candidateName: params.candidateName,
+      position: params.positionApplied,
+      mode: params.mode,
+      date: booking.scheduledDate,
+      time: booking.timeSlot
+    },
+    createdAt: new Date().toISOString()
+  });
+
+  return { success: true, booking, interviewRecord };
+}
+
+export async function recordContractRenewalOrExtension(data: {
+  personId: string;
+  action: 'EXTEND_MONTHS' | 'CONVERT_PERMANENT' | 'INITIATE_OFFBOARDING';
+  extensionMonths?: number;
+  newEndDate?: string;
+  notes?: string;
+}) {
+  const person = store.getCollection('people')[data.personId];
+  if (!person) throw new Error('Person record not found');
+
+  const now = new Date();
+  let updatedContract: any = {};
+
+  if (data.action === 'EXTEND_MONTHS') {
+    const monthsToAdd = data.extensionMonths || 3;
+    const currentEnd = person.expectedEndDate ? new Date(person.expectedEndDate) : new Date();
+    currentEnd.setMonth(currentEnd.getMonth() + monthsToAdd);
+    const newEndStr = currentEnd.toISOString().split('T')[0];
+
+    updatedContract = {
+      contractType: 'CONTRACTUAL',
+      contractEndDate: newEndStr,
+      expectedEndDate: newEndStr,
+      contractDurationMonths: (person.contractDurationMonths || 3) + monthsToAdd,
+      renewalStatus: 'EXTENDED',
+      renewalReminderSent: false,
+      updatedAt: now.toISOString()
+    };
+  } else if (data.action === 'CONVERT_PERMANENT') {
+    updatedContract = {
+      contractType: 'PERMANENT',
+      workerType: 'EMPLOYEE',
+      expectedEndDate: null,
+      contractEndDate: null,
+      renewalStatus: 'CONVERTED_PERMANENT',
+      updatedAt: now.toISOString()
+    };
+  } else {
+    updatedContract = {
+      renewalStatus: 'OFFBOARDING_PENDING',
+      updatedAt: now.toISOString()
+    };
+  }
+
+  store.updateDocument('people', data.personId, updatedContract);
+
+  // Add system notification for HR
+  store.setDocument('notifications', `notif-${Date.now()}`, {
+    notificationId: `notif-${Date.now()}`,
+    userId: 'ALL_HR',
+    type: 'CONTRACT_LIFECYCLE',
+    title: `Contract Update: ${person.fullName}`,
+    body: `${person.fullName} contract was updated (${data.action === 'EXTEND_MONTHS' ? `Extended by ${data.extensionMonths} months` : data.action === 'CONVERT_PERMANENT' ? 'Converted to Permanent' : 'Offboarding Pending'}).`,
+    entityType: 'PEOPLE',
+    entityId: data.personId,
+    read: false,
+    createdAt: now.toISOString()
+  });
+
+  return { success: true, updatedContract };
+}
+
+export async function createLeaveRequestFromAiEmail(data: InboundEmailLeaveDetails) {
+  const id = 'lve-' + Date.now().toString(36);
+  const now = new Date().toISOString();
+
+  const leaveDoc = {
+    requestId: id,
+    id,
+    userId: data.matchedPersonId || data.employeeEmail,
+    userName: data.employeeName || data.employeeEmail.split('@')[0],
+    leaveType: data.leaveType,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    requestedDays: data.requestedDays,
+    reason: data.reasonSummary,
+    status: 'PENDING',
+    source: 'INBOUND_HR_EMAIL_AI_PARSED',
+    submittedAt: now,
+    emailDetails: {
+      rawSubject: data.rawSubject,
+      senderEmail: data.employeeEmail,
+      confidenceScore: data.confidenceScore
+    }
+  };
+
+  store.setDocument('leaveRequests', id, leaveDoc);
+
+  // Notify HR
+  store.setDocument('notifications', `notif-leave-${Date.now()}`, {
+    notificationId: `notif-leave-${Date.now()}`,
+    userId: 'ALL_HR',
+    type: 'LEAVE_DETECTED',
+    title: `AI Detected Leave: ${data.employeeName || data.employeeEmail}`,
+    body: `Inbound email requested ${data.requestedDays} day(s) ${data.leaveType.toLowerCase()} leave from ${data.startDate} to ${data.endDate}.`,
+    entityType: 'LEAVE',
+    entityId: id,
+    read: false,
+    createdAt: now
+  });
+
+  return { success: true, requestId: id, leaveDoc };
+}
+

@@ -31,6 +31,39 @@ class PersistentStore {
           this.data['attendance'] = JSON.parse(JSON.stringify(initialSeedData['attendance'] || {}));
           this.save();
         }
+
+        // Ensure applications collection is merged
+        if (!this.data['applications'] || Object.keys(this.data['applications']).length === 0) {
+          this.data['applications'] = JSON.parse(JSON.stringify(initialSeedData['applications'] || {}));
+          this.save();
+        }
+
+        // Ensure Shiza candidate and application exist
+        if (!this.data['candidates']?.['cand-shiza']) {
+          this.data['candidates'] = this.data['candidates'] || {};
+          this.data['candidates']['cand-shiza'] = JSON.parse(JSON.stringify(initialSeedData['candidates']['cand-shiza']));
+          this.save();
+        }
+        if (!this.data['applications']?.['app-shiza-1']) {
+          this.data['applications'] = this.data['applications'] || {};
+          this.data['applications']['app-shiza-1'] = JSON.parse(JSON.stringify(initialSeedData['applications']['app-shiza-1']));
+          this.save();
+        }
+
+        // Ensure Leave test email exists
+        if (!this.data['emailThreads']?.['th-leave-saad']) {
+          this.data['emailThreads'] = this.data['emailThreads'] || {};
+          this.data['emailThreads']['th-leave-saad'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads']['th-leave-saad']));
+          this.data['emailThreads/th-leave-saad/messages'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads/th-leave-saad/messages']));
+          this.save();
+        }
+
+        // Ensure People contract tenure fields are refreshed
+        if (this.data['people']?.['usr-member'] && !this.data['people']['usr-member'].contractType) {
+          this.data['people']['usr-member'] = { ...this.data['people']['usr-member'], ...initialSeedData['people']['usr-member'] };
+          this.data['people']['usr-intern'] = { ...this.data['people']['usr-intern'], ...initialSeedData['people']['usr-intern'] };
+          this.save();
+        }
       } else {
         this.data = JSON.parse(JSON.stringify(initialSeedData));
         this.save();

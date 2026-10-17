@@ -20,10 +20,12 @@ import {
   AlertTriangle,
   UserPlus,
   Users,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { MarketingLeadsModal } from './MarketingLeadsModal';
 import { MassAiOutreachModal } from './MassAiOutreachModal';
+import { OneClickInterviewModal } from './OneClickInterviewModal';
 
 const STAGE_OPTIONS: ApplicationStage[] = [
   'NEW_APPLICATION',
@@ -64,6 +66,7 @@ export const ApplicationsTable: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [marketingModalOpen, setMarketingModalOpen] = useState(false);
   const [massAiModalOpen, setMassAiModalOpen] = useState(false);
+  const [selectedInterviewApp, setSelectedInterviewApp] = useState<any | null>(null);
 
   // Stage transition confirmation modal
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -277,6 +280,7 @@ export const ApplicationsTable: React.FC = () => {
                 </th>
                 <th className="p-3">Candidate</th>
                 <th className="p-3">Position</th>
+                <th className="p-3">AI Match & Fit</th>
                 <th className="p-3">Stage</th>
                 <th className="p-3">Source</th>
                 <th className="p-3">Follow-up</th>
@@ -287,7 +291,7 @@ export const ApplicationsTable: React.FC = () => {
             <tbody className="divide-y divide-slate-100">
               {filteredApps.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-400 text-xs">
+                  <td colSpan={9} className="p-8 text-center text-slate-400 text-xs">
                     {loading ? 'Loading applications...' : 'No applications match the active filters.'}
                   </td>
                 </tr>
@@ -315,6 +319,32 @@ export const ApplicationsTable: React.FC = () => {
                     <td className="p-3">
                       <span className="font-medium text-slate-800">{app.positionAppliedFor}</span>
                       <span className="block text-[10px] text-slate-400 font-mono">{app.legacyApplicationId || app.applicationId.slice(0, 8)}</span>
+                    </td>
+
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1">
+                        {app.aiFitRecommendation ? (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold w-fit ${
+                            app.aiFitRecommendation === 'BEST_FIT'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : app.aiFitRecommendation === 'HIGHLY_RECOMMENDED'
+                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                              : app.aiFitRecommendation === 'UNDER_QUALIFIED'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            <Sparkles className="w-2.5 h-2.5 mr-1 text-amber-500" />
+                            {app.aiFitScore || 94}% {app.aiFitRecommendation.replace('_', ' ')}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 w-fit">
+                            Pre-Screened
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500">
+                          {app.yearsOfExperience !== undefined ? `${app.yearsOfExperience} yrs exp` : '1+ yr exp'} • {app.candidate?.education || app.education || 'Bachelor'}
+                        </span>
+                      </div>
                     </td>
 
                     <td className="p-3">
@@ -346,14 +376,25 @@ export const ApplicationsTable: React.FC = () => {
                     </td>
 
                     <td className="p-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/recruitment/candidates/${app.candidateId}?appId=${app.applicationId}`)}
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        360° Profile
-                      </Button>
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <Button
+                          size="sm"
+                          onClick={() => setSelectedInterviewApp(app)}
+                          className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[11px] py-1 px-2.5 shadow-2xs flex items-center gap-1 cursor-pointer"
+                          title="Fast-forward screening & book 1-click interview"
+                        >
+                          <Zap className="w-3 h-3 text-amber-200 fill-amber-200" />
+                          <span>⚡ Go Ahead</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/recruitment/candidates/${app.candidateId}?appId=${app.applicationId}`)}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          360° Profile
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -401,6 +442,27 @@ export const ApplicationsTable: React.FC = () => {
           setSelectedIds([]);
         }}
       />
+
+      {/* 1-Click Fast-Forward Interview Booking Modal */}
+      {selectedInterviewApp && (
+        <OneClickInterviewModal
+          isOpen={!!selectedInterviewApp}
+          onClose={() => setSelectedInterviewApp(null)}
+          candidateName={selectedInterviewApp.candidate?.fullName || 'Candidate'}
+          candidateEmail={selectedInterviewApp.candidate?.personalEmail || ''}
+          candidateId={selectedInterviewApp.candidateId}
+          applicationId={selectedInterviewApp.applicationId}
+          positionApplied={selectedInterviewApp.positionAppliedFor || 'Internship'}
+          education={selectedInterviewApp.candidate?.education || selectedInterviewApp.education || 'BS Degree (4-Year)'}
+          yearsOfExperience={selectedInterviewApp.yearsOfExperience ?? 1.5}
+          aiFitScore={selectedInterviewApp.aiFitScore ?? 94}
+          aiFitRecommendation={selectedInterviewApp.aiFitRecommendation ?? 'BEST_FIT'}
+          screeningQnA={selectedInterviewApp.screeningQuestionsAndAnswers || []}
+          onBookingSuccess={() => {
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 };

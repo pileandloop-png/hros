@@ -129,7 +129,14 @@ export const LeavePage: React.FC = () => {
               ) : (
                 requests.map((r) => (
                   <tr key={r.requestId} className="hover:bg-slate-50/80">
-                    <td className="p-3 font-semibold text-slate-900">{r.userName}</td>
+                    <td className="p-3">
+                      <div className="font-semibold text-slate-900">{r.userName}</div>
+                      {(r as any).source === 'INBOUND_HR_EMAIL_AI_PARSED' && (
+                        <span className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
+                          ✉️ AI Email Parsed
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3"><Badge variant="info">{r.leaveType}</Badge></td>
                     <td className="p-3 font-mono text-slate-700">{r.startDate} to {r.endDate}</td>
                     <td className="p-3 font-bold text-slate-800">{r.requestedDays}d</td>

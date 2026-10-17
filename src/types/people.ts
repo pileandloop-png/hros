@@ -15,8 +15,15 @@ export interface PeopleRecord {
   workerType: WorkerType;
   managerId: string;
   joiningDate: any;
+  joinDate?: any;
   expectedEndDate?: any;
   actualEndDate?: any;
+  contractType?: 'CONTRACTUAL' | 'PERMANENT' | 'PROBATION' | 'INTERNSHIP';
+  contractDurationMonths?: number;
+  contractStartDate?: any;
+  contractEndDate?: any;
+  renewalReminderSent?: boolean;
+  renewalStatus?: 'ACTIVE' | 'EXPIRING_SOON' | 'EXTENDED' | 'CONVERTED_PERMANENT' | 'OFFBOARDED';
   status: PeopleStatus;
   workingDays: string[];
   expectedHoursPerDay: number;

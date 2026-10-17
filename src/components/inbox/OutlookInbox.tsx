@@ -48,6 +48,7 @@ import {
 import { ComposeEmailModal } from './ComposeEmailModal';
 import { CreateFolderModal } from './CreateFolderModal';
 import { IndeedApplicationBanner } from './IndeedApplicationBanner';
+import { AiEmailLeaveBanner } from './AiEmailLeaveBanner';
 import { DeliverabilityCard } from '../email/DeliverabilityCard';
 import { InAppCvViewer } from '../recruitment/InAppCvViewer';
 import { DeliverabilityTelemetry, IndeedApplicationDetails } from '../../services/cvAnalysisService';
@@ -714,6 +715,16 @@ export const OutlookInbox: React.FC = () => {
                   onClose={() => setLastTelemetry(null)}
                 />
               )}
+
+              {/* AI Employee Leave Application Detector & 1-Click Scheduler */}
+              <AiEmailLeaveBanner
+                thread={selectedThread}
+                message={messages[0]}
+                existingPeople={Object.values(store.getCollection('people') || {})}
+                onLeaveProcessed={() => {
+                  toast.success('Leave scheduled and recorded successfully in HR database!');
+                }}
+              />
 
               {/* Indeed Application & Below Bachelor Detection Center */}
               <IndeedApplicationBanner

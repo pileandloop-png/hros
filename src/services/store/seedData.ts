@@ -173,6 +173,30 @@ export const initialSeedData: SeedCollectionMap = {
       resumeUrl: "#",
       createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
       updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+    },
+    "cand-shiza": {
+      id: "cand-shiza",
+      candidateId: "cand-shiza",
+      fullName: "Shiza Tariq",
+      email: "shiza.tariq@gmail.com",
+      personalEmail: "shiza.tariq@gmail.com",
+      normalizedEmail: "shiza.tariq@gmail.com",
+      phone: "+92 321 4567891",
+      normalizedPhone: "+923214567891",
+      city: "Lahore",
+      vacancyId: "vac-4",
+      vacancyTitle: "Growth & Content Intern",
+      positionAppliedFor: "Content Writer",
+      stage: "NEW_APPLICATION",
+      rating: 5,
+      source: "Indeed",
+      education: "BS English Literature & Creative Writing (PU)",
+      appliedDate: new Date(Date.now() - 1 * 86400000).toISOString(),
+      notes: "High match candidate for content writer role. Local Lahore resident, immediate joiner.",
+      cvLink: "https://employers.indeed.com/c#candidates/view?id=ind-shiza-tariq",
+      resumeUrl: "https://employers.indeed.com/c#candidates/view?id=ind-shiza-tariq",
+      createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
     }
   },
   people: {
@@ -220,33 +244,53 @@ export const initialSeedData: SeedCollectionMap = {
     },
     "usr-intern": {
       id: "usr-intern",
+      personId: "usr-intern",
       uid: "usr-intern",
       fullName: "Zeeshan Malik",
       email: "intern@pileandloop.com",
+      personalEmail: "intern@pileandloop.com",
       password: "fourty420",
       role: "HR_INTERN",
       department: "Human Resources",
       designation: "HR Operations Intern",
+      jobTitle: "HR Operations Intern",
+      workerType: "INTERN",
+      contractType: "CONTRACTUAL",
+      contractDurationMonths: 4,
+      contractStartDate: "2026-06-01",
+      contractEndDate: new Date(Date.now() + 42 * 86400000).toISOString().split('T')[0],
+      expectedEndDate: new Date(Date.now() + 42 * 86400000).toISOString().split('T')[0],
+      renewalStatus: "PENDING_DECISION",
       status: "ACTIVE",
       joinDate: "2026-06-01",
       internshipStartDate: "2026-06-01",
-      internshipEndDate: "2026-09-30",
+      internshipEndDate: new Date(Date.now() + 42 * 86400000).toISOString().split('T')[0],
       phone: "+92 300 0000004",
       createdAt: new Date(Date.now() - 90 * 86400000).toISOString()
     },
     "usr-member": {
       id: "usr-member",
+      personId: "usr-member",
       uid: "usr-member",
       fullName: "Saad Qureshi",
       email: "member@pileandloop.com",
+      personalEmail: "member@pileandloop.com",
       password: "fourty420",
       role: "TEAM_MEMBER",
       department: "Engineering",
       designation: "Software Engineering Intern",
+      jobTitle: "Software Engineering Intern",
+      workerType: "INTERN",
+      contractType: "CONTRACTUAL",
+      contractDurationMonths: 4,
+      contractStartDate: "2026-07-01",
+      contractEndDate: new Date(Date.now() + 18 * 86400000).toISOString().split('T')[0],
+      expectedEndDate: new Date(Date.now() + 18 * 86400000).toISOString().split('T')[0],
+      renewalStatus: "PENDING_DECISION",
       status: "ACTIVE",
       joinDate: "2026-07-01",
       internshipStartDate: "2026-07-01",
-      internshipEndDate: "2026-10-31",
+      internshipEndDate: new Date(Date.now() + 18 * 86400000).toISOString().split('T')[0],
       phone: "+92 300 0000005",
       createdAt: new Date(Date.now() - 60 * 86400000).toISOString()
     }
@@ -437,6 +481,56 @@ export const initialSeedData: SeedCollectionMap = {
       folder: "INBOX",
       createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
       updatedAt: new Date(Date.now() - 5 * 3600000).toISOString()
+    },
+    "th-leave-saad": {
+      id: "th-leave-saad",
+      threadId: "th-leave-saad",
+      subject: "Leave Application - Urgent Personal Work on Friday",
+      candidateId: null,
+      category: "Leave",
+      assignedTo: null,
+      participantEmails: ["member@pileandloop.com", "hr@pileandloop.com"],
+      messageCount: 1,
+      lastMessageSnippet: "Respected HR Team, I am writing to request casual leave for 1 day on Friday, October 24th, 2026, due to urgent personal work.",
+      lastMessageAt: new Date(Date.now() - 30 * 60000).toISOString(),
+      unread: true,
+      starred: true,
+      archived: false,
+      folder: "INBOX",
+      createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
+      updatedAt: new Date(Date.now() - 30 * 60000).toISOString()
+    }
+  },
+  "emailThreads/th-leave-saad/messages": {
+    "msg-leave-saad-1": {
+      id: "msg-leave-saad-1",
+      messageId: "msg-leave-saad-1",
+      smtpMessageId: "<leave-saad-2026@pileandloop.com>",
+      threadId: "th-leave-saad",
+      from: "member@pileandloop.com",
+      to: ["hr@pileandloop.com"],
+      subject: "Leave Application - Urgent Personal Work on Friday",
+      textBody: `Respected HR Team,
+
+I am writing to formally request 1 day casual leave on Friday, October 24th, 2026, due to an urgent personal family matter at home. 
+
+I have planned ahead and will ensure that all my pending code commits and pull request reviews are completed before Thursday COB.
+
+Thank you for your understanding.
+
+Best regards,
+Saad Qureshi
+Software Engineering Intern
+Engineering Department`,
+      htmlBody: `<div style="font-family: sans-serif; font-size: 13px; color: #1e293b; line-height: 1.6;">
+<p>Respected HR Team,</p>
+<p>I am writing to formally request 1 day casual leave on Friday, October 24th, 2026, due to an urgent personal family matter at home.</p>
+<p>I have planned ahead and will ensure that all my pending code commits and pull request reviews are completed before Thursday COB.</p>
+<p>Thank you for your understanding.</p>
+<p>Best regards,<br/><strong>Saad Qureshi</strong><br/>Software Engineering Intern<br/>Engineering Department</p>
+</div>`,
+      direction: "INBOUND",
+      createdAt: new Date(Date.now() - 30 * 60000).toISOString()
     }
   },
   "emailThreads/th-indeed-usman/messages": {
@@ -628,6 +722,98 @@ React, TypeScript, Node.js, Express, PostgreSQL, MongoDB, Git, REST APIs`,
       },
       createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
       updatedAt: new Date(Date.now() - 1 * 3600000).toISOString()
+    }
+  },
+  applications: {
+    "app-shiza-1": {
+      applicationId: "app-shiza-1",
+      id: "app-shiza-1",
+      candidateId: "cand-shiza",
+      vacancyId: "vac-4",
+      positionAppliedFor: "Content Writer",
+      source: "Indeed",
+      sourcedPlatform: "Indeed",
+      currentStage: "NEW_APPLICATION",
+      yearsOfExperience: 1.5,
+      education: "BS English Literature & Creative Writing (PU)",
+      aiFitScore: 96,
+      aiFitRecommendation: "BEST_FIT",
+      aiFitReasoning: "Exceptional alignment with B2B SaaS copywriting requirements. High score on writing samples, local Lahore resident, available immediately, and answers all pre-screening hurdles with 100% positive match.",
+      screeningQuestionsAndAnswers: [
+        { question: "Are you available for full-time on-site work at our Lahore office (Gulberg III)?", answer: "Yes, I reside in Lahore and can join immediately on-site.", passed: true },
+        { question: "How many hours per week can you commit to this role?", answer: "40 hours / week (full-time schedule: 09:00 - 18:00 PKT).", passed: true },
+        { question: "Share links to 2-3 published articles or content samples", answer: "1) https://medium.com/@shizawrites/b2b-saas-copy-guide 2) Tech blog portfolio attached in resume", passed: true },
+        { question: "What is your expected monthly stipend/compensation?", answer: "PKR 55,000 / month (negotiable for long-term growth).", passed: true }
+      ],
+      screeningScore: 96,
+      followUpStatus: "Ready for 1-Click Interview",
+      createdAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+    },
+    "app-bilal-1": {
+      applicationId: "app-bilal-1",
+      id: "app-bilal-1",
+      candidateId: "cand-1",
+      vacancyId: "vac-1",
+      positionAppliedFor: "Full-Stack Developer Intern",
+      source: "LinkedIn",
+      sourcedPlatform: "LinkedIn",
+      currentStage: "NEW_APPLICATION",
+      yearsOfExperience: 1,
+      education: "BS Computer Science (COMSATS Lahore)",
+      aiFitScore: 88,
+      aiFitRecommendation: "HIGHLY_RECOMMENDED",
+      aiFitReasoning: "Strong technical portfolio with React and Node.js. 2 public GitHub projects demonstrating clean architecture.",
+      screeningQuestionsAndAnswers: [
+        { question: "Are you proficient in React and TypeScript?", answer: "Yes, 1+ year practical hands-on experience building frontend dashboards.", passed: true },
+        { question: "Available for Lahore on-site internship?", answer: "Yes, ready to start from next week.", passed: true }
+      ],
+      screeningScore: 88,
+      followUpStatus: "Review Pending",
+      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * 86400000).toISOString()
+    },
+    "app-ayesha-1": {
+      applicationId: "app-ayesha-1",
+      id: "app-ayesha-1",
+      candidateId: "cand-2",
+      vacancyId: "vac-2",
+      positionAppliedFor: "UI/UX Design Intern",
+      source: "Indeed",
+      sourcedPlatform: "Indeed",
+      currentStage: "SCREENING_RESPONSE_RECEIVED",
+      yearsOfExperience: 2,
+      education: "BS Visual Communication Design (PU CAD)",
+      aiFitScore: 94,
+      aiFitRecommendation: "BEST_FIT",
+      aiFitReasoning: "High aesthetic caliber, proficient with Figma design systems and interactive prototyping.",
+      screeningQuestionsAndAnswers: [
+        { question: "Can you provide a link to your Figma portfolio?", answer: "https://figma.com/@ayesha-designs-portfolio", passed: true },
+        { question: "Notice period?", answer: "Immediate joiner (0 days)", passed: true }
+      ],
+      screeningScore: 94,
+      followUpStatus: "Screened",
+      createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 3 * 86400000).toISOString()
+    },
+    "app-zainab-1": {
+      applicationId: "app-zainab-1",
+      id: "app-zainab-1",
+      candidateId: "cand-6",
+      vacancyId: "vac-2",
+      positionAppliedFor: "UI/UX Design Intern",
+      source: "Indeed",
+      sourcedPlatform: "Indeed",
+      currentStage: "OFFER_SENT",
+      yearsOfExperience: 2,
+      education: "BS Design (FAST)",
+      aiFitScore: 92,
+      aiFitRecommendation: "BEST_FIT",
+      aiFitReasoning: "Cleared all rounds with top marks from design lead.",
+      screeningScore: 92,
+      followUpStatus: "Awaiting Signature",
+      createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
     }
   }
 };

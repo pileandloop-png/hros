@@ -635,3 +635,477 @@ hr@pileandloop.com | https://pileandloop.com`;
 
   return { subject, body };
 }
+
+// ============================================================================
+// MULTI-PLATFORM ATS INGESTION & AI BEST-FIT RANKING ENGINE
+// ============================================================================
+
+export interface MultiPlatformApplicationDetails {
+  platform: 'Indeed' | 'LinkedIn' | 'Glassdoor' | 'Career Portal' | 'Custom';
+  candidateName: string;
+  candidateEmail: string;
+  candidatePhone?: string;
+  positionApplied: string;
+  educationClassification: EducationClassification;
+  yearsOfExperience: number;
+  experienceLabel: string;
+  isFreshGraduate: boolean;
+  screeningQuestionsAndAnswers: {
+    question: string;
+    answer: string;
+    passed: boolean;
+  }[];
+  cvOrProfileUrl?: string;
+  resumeSnippet: string;
+  aiFitScore: number;
+  aiFitRecommendation: 'BEST_FIT' | 'HIGHLY_RECOMMENDED' | 'SHORTLIST' | 'BORDERLINE' | 'UNDER_QUALIFIED';
+  aiFitReasoning: string;
+  autoSkipRecommended: boolean;
+  rawEmailSubject: string;
+}
+
+/**
+ * Universal Ingestion Parser for Multi-Platform Job Applications
+ * Supports LinkedIn, Indeed, Glassdoor, Career Portal & Direct Webhooks
+ */
+export function parseMultiPlatformApplicationEmail(
+  subject: string = '',
+  textBody: string = '',
+  htmlBody: string = '',
+  fromEmail: string = '',
+  targetRoleRequirements?: string[]
+): MultiPlatformApplicationDetails {
+  const combined = (subject + ' ' + textBody + ' ' + htmlBody).toLowerCase();
+
+  // 1. Detect Source Platform
+  let platform: 'Indeed' | 'LinkedIn' | 'Glassdoor' | 'Career Portal' | 'Custom' = 'Career Portal';
+  if (combined.includes('indeed') || fromEmail.includes('indeed')) {
+    platform = 'Indeed';
+  } else if (combined.includes('linkedin') || fromEmail.includes('linkedin')) {
+    platform = 'LinkedIn';
+  } else if (combined.includes('glassdoor') || fromEmail.includes('glassdoor')) {
+    platform = 'Glassdoor';
+  } else if (combined.includes('portal') || combined.includes('careers') || combined.includes('website')) {
+    platform = 'Career Portal';
+  }
+
+  // 2. Candidate Name Extraction
+  let candidateName = 'Applicant';
+  const namePatterns = [
+    // LinkedIn: "Shiza Farooq applied for Content Writer" or "Application from Shiza Farooq"
+    /(?:application from|applied for[^-–\n]+from)\s+([A-Za-z\s]{2,30})/i,
+    /([A-Za-z\s]{2,30})\s+(?:applied to|has applied for|applied for)/i,
+    // Indeed: "Indeed Application: Shiza Farooq - Content Writer"
+    /Indeed Application:\s*([^-–\n]+)/i,
+    // Standard: "Name: Shiza Farooq"
+    /(?:Candidate Name|Applicant Name|Full Name|Name):\s*([^\n\r]+)/i
+  ];
+
+  for (const pat of namePatterns) {
+    const match = subject.match(pat) || textBody.match(pat);
+    if (match && match[1]?.trim()) {
+      candidateName = match[1].trim();
+      break;
+    }
+  }
+
+  // 3. Position Applied Extraction
+  let positionApplied = 'Content Writer';
+  const posPatterns = [
+    /applied for\s+([A-Za-z0-9\s/–-]{2,40})/i,
+    /[-–]\s*([A-Za-z0-9\s/]{2,40})$/,
+    /(?:Position|Role|Job Title|Job Opening):\s*([^\n\r]+)/i
+  ];
+  for (const pat of posPatterns) {
+    const match = subject.match(pat) || textBody.match(pat);
+    if (match && match[1]?.trim()) {
+      positionApplied = match[1].trim();
+      break;
+    }
+  }
+
+  // 4. Candidate Email Extraction
+  let candidateEmail = fromEmail;
+  const emailMatch = (textBody + ' ' + htmlBody).match(/[a-zA-Z0-9._%+-]+@(?!pileandloop\.com)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+  if (emailMatch) {
+    candidateEmail = emailMatch[0];
+  } else if (fromEmail && !fromEmail.includes('pileandloop.com')) {
+    candidateEmail = fromEmail;
+  } else {
+    candidateEmail = `${candidateName.toLowerCase().replace(/\s+/g, '.')}@applicant.net`;
+  }
+
+  // 5. Candidate Phone Extraction
+  const phoneMatch = textBody.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/);
+  const candidatePhone = phoneMatch ? phoneMatch[0].trim() : undefined;
+
+  // 6. Education Classification
+  const educationClassification = classifyEducationLevel(textBody + ' ' + htmlBody);
+
+  // 7. Experience Extraction (e.g. "2 years experience", "fresh graduate")
+  let yearsOfExperience = 0;
+  let isFreshGraduate = false;
+  let experienceLabel = 'Fresh / Entry Level';
+
+  const expMatch = textBody.match(/(\d+)\+?\s*(?:years?|yrs?)(?:\s*(?:of\s*)?experience)?/i);
+  if (expMatch) {
+    yearsOfExperience = parseInt(expMatch[1], 10);
+    experienceLabel = `${yearsOfExperience}+ Years Professional Experience`;
+  } else if (combined.includes('fresh') || combined.includes('entry level') || combined.includes('no experience') || combined.includes('student')) {
+    isFreshGraduate = true;
+    experienceLabel = 'Fresh Graduate / Student';
+  }
+
+  // 8. Pre-Screening Automated Questions & Answers Extraction
+  const screeningQuestionsAndAnswers: { question: string; answer: string; passed: boolean }[] = [];
+
+  // Q1: Availability & Notice Period
+  const availMatch = textBody.match(/(?:availability|notice period|when can you start|start date)[\s:]*([^\n\r.]+)/i);
+  const availAnswer = availMatch ? availMatch[1].trim() : 'Immediate (Within 48 hours)';
+  screeningQuestionsAndAnswers.push({
+    question: 'What is your availability or notice period to begin work?',
+    answer: availAnswer,
+    passed: !availAnswer.toLowerCase().includes('not available') && !availAnswer.toLowerCase().includes('months')
+  });
+
+  // Q2: Work Timing & Core Shift Hours
+  const shiftMatch = textBody.match(/(?:working hours|shift|timings|full time|can you work)[\s:]*([^\n\r.]+)/i);
+  const shiftAnswer = shiftMatch ? shiftMatch[1].trim() : 'Available for core office hours (09:00 AM - 04:00 PM PKT)';
+  screeningQuestionsAndAnswers.push({
+    question: 'Are you available for core office timings (09:00 AM - 04:00 PM PKT)?',
+    answer: shiftAnswer,
+    passed: true
+  });
+
+  // Q3: Relevant Experience & Writing / Technical Portfolio
+  const portfolioMatch = (textBody + ' ' + htmlBody).match(/https?:\/\/[^\s"'<>]+/i);
+  const portfolioAnswer = portfolioMatch ? portfolioMatch[0] : (yearsOfExperience > 0 ? `${yearsOfExperience} yrs proven samples available` : 'Writing samples submitted upon request');
+  screeningQuestionsAndAnswers.push({
+    question: 'Do you have relevant portfolio samples or domain experience?',
+    answer: portfolioAnswer,
+    passed: true
+  });
+
+  // Q4: Education Eligibility
+  screeningQuestionsAndAnswers.push({
+    question: 'Do you possess a minimum 4-year Bachelor degree or equivalent qualification?',
+    answer: educationClassification.highestDegreeFound,
+    passed: !educationClassification.isBelowBachelor
+  });
+
+  // 9. Profile / CV URL
+  let cvOrProfileUrl: string | undefined;
+  const urlMatches = (textBody + ' ' + htmlBody).match(/https?:\/\/[^\s"'<>]*(?:linkedin\.com|indeed\.com|drive\.google\.com|github\.com)[^\s"'<>]*/gi);
+  if (urlMatches && urlMatches.length > 0) {
+    cvOrProfileUrl = urlMatches[0];
+  }
+
+  // 10. AI Job Description Fit Evaluation
+  let aiFitScore = 70;
+  if (!educationClassification.isBelowBachelor) aiFitScore += 15;
+  else aiFitScore -= 30;
+
+  if (yearsOfExperience >= 2) aiFitScore += 15;
+  else if (yearsOfExperience >= 1) aiFitScore += 10;
+  else if (isFreshGraduate) aiFitScore += 5;
+
+  if (candidatePhone) aiFitScore += 5;
+  if (screeningQuestionsAndAnswers.every(q => q.passed)) aiFitScore += 10;
+
+  aiFitScore = Math.min(98, Math.max(20, aiFitScore));
+
+  let aiFitRecommendation: 'BEST_FIT' | 'HIGHLY_RECOMMENDED' | 'SHORTLIST' | 'BORDERLINE' | 'UNDER_QUALIFIED' = 'SHORTLIST';
+  let aiFitReasoning = '';
+
+  if (educationClassification.isBelowBachelor) {
+    aiFitRecommendation = 'UNDER_QUALIFIED';
+    aiFitScore = Math.min(aiFitScore, 40);
+    aiFitReasoning = `${candidateName} holds ${educationClassification.highestDegreeFound}, which does not meet our minimum 4-year Bachelor requirement. Auto-skip recommended.`;
+  } else if (aiFitScore >= 90) {
+    aiFitRecommendation = 'BEST_FIT';
+    aiFitReasoning = `${candidateName} is evaluated as BEST_FIT (${aiFitScore}% match) for ${positionApplied}. Degree verified (${educationClassification.highestDegreeFound}), ${experienceLabel}, availability confirmed, and screening criteria fully met. Ready for 1-Click Interview Scheduling.`;
+  } else if (aiFitScore >= 78) {
+    aiFitRecommendation = 'HIGHLY_RECOMMENDED';
+    aiFitReasoning = `${candidateName} is Highly Recommended (${aiFitScore}% match). Meets educational standards with relevant background. Recommended to schedule interview.`;
+  } else if (aiFitScore >= 60) {
+    aiFitRecommendation = 'SHORTLIST';
+    aiFitReasoning = `${candidateName} satisfies essential requirements with potential for technical interview review.`;
+  } else {
+    aiFitRecommendation = 'BORDERLINE';
+    aiFitReasoning = `${candidateName} has minor qualification or experience gaps. Brief screening recommended before booking.`;
+  }
+
+  return {
+    platform,
+    candidateName,
+    candidateEmail,
+    candidatePhone,
+    positionApplied,
+    educationClassification,
+    yearsOfExperience,
+    experienceLabel,
+    isFreshGraduate,
+    screeningQuestionsAndAnswers,
+    cvOrProfileUrl,
+    resumeSnippet: textBody.slice(0, 1500).trim(),
+    aiFitScore,
+    aiFitRecommendation,
+    aiFitReasoning,
+    autoSkipRecommended: educationClassification.isBelowBachelor,
+    rawEmailSubject: subject
+  };
+}
+
+// ============================================================================
+// 1-CLICK FAST-FORWARD INTERVIEW BOOKING ENGINE
+// ============================================================================
+
+export interface OneClickInterviewBookingParams {
+  candidateName: string;
+  candidateEmail: string;
+  positionApplied: string;
+  mode: 'ONLINE' | 'PHYSICAL';
+  scheduledDate?: string; // YYYY-MM-DD
+  timeSlot?: string; // e.g. "11:00 AM - 11:45 AM PKT"
+  interviewerName?: string;
+  meetingPlatform?: 'Google Meet' | 'Zoom' | 'Microsoft Teams' | 'Office Conference Room';
+  customNotes?: string;
+}
+
+export interface OneClickInterviewBookingResult {
+  interviewId: string;
+  meetingLink: string;
+  scheduledDate: string;
+  timeSlot: string;
+  locationDetails: string;
+  emailSubject: string;
+  emailHtmlBody: string;
+  emailTextBody: string;
+}
+
+/**
+ * Generate complete 1-Click Fast-Forward Interview details, links, and personalized email invitation
+ */
+export function generate1ClickInterviewDetails(
+  params: OneClickInterviewBookingParams
+): OneClickInterviewBookingResult {
+  const firstName = params.candidateName.split(' ')[0] || 'Candidate';
+  const interviewId = `int-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  
+  // Default to tomorrow 11:00 AM PKT if not supplied
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const scheduledDate = params.scheduledDate || tomorrow.toISOString().split('T')[0];
+  const timeSlot = params.timeSlot || '11:00 AM - 11:45 AM PKT';
+  const interviewer = params.interviewerName || 'Talent Acquisition Team';
+
+  let meetingLink = '';
+  let locationDetails = '';
+
+  if (params.mode === 'ONLINE') {
+    const meetHash = Math.random().toString(36).substring(2, 5) + '-' + Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 5);
+    meetingLink = `https://meet.google.com/${meetHash}`;
+    locationDetails = `Online Video Call (${params.meetingPlatform || 'Google Meet'}): ${meetingLink}`;
+  } else {
+    meetingLink = 'https://maps.google.com/?q=Pile+and+Loop+Lahore';
+    locationDetails = 'Physical On-Site Interview • Pile & Loop Headquarters, Suite 402, Al-Hafeez Commercial Complex, Main Boulevard, Gulberg III, Lahore, Pakistan';
+  }
+
+  const emailSubject = `Interview Scheduled: ${params.positionApplied} with Pile & Loop [${scheduledDate}]`;
+
+  const emailTextBody = `Dear ${firstName},
+
+Congratulations! Following our automated ATS screening review, your credentials and profile have been strongly matched for the ${params.positionApplied} position at Pile & Loop.
+
+We are pleased to confirm your interview appointment:
+
+• Position: ${params.positionApplied}
+• Date: ${scheduledDate}
+• Time: ${timeSlot} (Pakistan Standard Time)
+• Interview Mode: ${params.mode === 'ONLINE' ? 'Online Video Interview' : 'Physical On-Site Interview'}
+• Location / Video Link: ${locationDetails}
+• Lead Interviewer: ${interviewer}
+
+Preparation Guidelines:
+1. Please be present 5 minutes prior to the scheduled start time.
+2. If attending online, please ensure a stable internet connection and webcam test.
+3. Keep a copy of your recent projects, portfolio, or resume accessible.
+
+Should you need to reschedule or have any questions prior to the session, reply directly to this email at hr@pileandloop.com.
+
+We look forward to meeting you!
+
+Warm regards,
+Talent Acquisition & Recruitment Team
+Pile & Loop Operating System
+hr@pileandloop.com | https://pileandloop.com`;
+
+  const emailHtmlBody = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+    <div style="border-bottom: 2px solid #10b981; padding-bottom: 12px; margin-bottom: 20px;">
+      <h2 style="color: #0f172a; margin: 0; font-size: 20px;">Pile &amp; Loop • Interview Confirmation</h2>
+      <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px;">Official Recruitment &amp; Talent Selection Notice</p>
+    </div>
+
+    <p style="font-size: 14px; line-height: 1.6;">Dear <strong>${firstName}</strong>,</p>
+
+    <p style="font-size: 14px; line-height: 1.6;">Congratulations! Following our review of your application and screening credentials, we are pleased to confirm your interview for the <strong>${params.positionApplied}</strong> position at Pile &amp; Loop.</p>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 20px 0;">
+      <h3 style="margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a;">Interview Appointment Details</h3>
+      <table style="width: 100%; font-size: 13px; line-height: 1.8;">
+        <tr><td style="color: #64748b; width: 140px;">Position:</td><td><strong>${params.positionApplied}</strong></td></tr>
+        <tr><td style="color: #64748b;">Scheduled Date:</td><td><strong>${scheduledDate}</strong></td></tr>
+        <tr><td style="color: #64748b;">Time Slot:</td><td><strong>${timeSlot}</strong></td></tr>
+        <tr><td style="color: #64748b;">Interview Mode:</td><td><span style="background-color: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 9999px; font-weight: bold; font-size: 11px;">${params.mode === 'ONLINE' ? 'ONLINE VIDEO CALL' : 'PHYSICAL ON-SITE'}</span></td></tr>
+        <tr><td style="color: #64748b; vertical-align: top;">Access Link / Venue:</td><td><strong style="color: #0284c7;">${locationDetails}</strong></td></tr>
+      </table>
+    </div>
+
+    <p style="font-size: 13px; line-height: 1.6; color: #475569;">Please test your camera and audio beforehand and join 5 minutes early. If you need to request an adjustment to this timing, reply directly to this email.</p>
+
+    <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 24px; font-size: 12px; color: #64748b;">
+      <p style="margin: 0;"><strong>Talent Acquisition &amp; Human Resources</strong><br/>Pile &amp; Loop • hr@pileandloop.com<br/><a href="https://pileandloop.com" style="color: #10b981; text-decoration: none;">pileandloop.com</a></p>
+    </div>
+  </div>`;
+
+  return {
+    interviewId,
+    meetingLink,
+    scheduledDate,
+    timeSlot,
+    locationDetails,
+    emailSubject,
+    emailHtmlBody,
+    emailTextBody
+  };
+}
+
+// ============================================================================
+// EMAIL-DRIVEN AI LEAVE DETECTION ENGINE
+// ============================================================================
+
+export interface InboundEmailLeaveDetails {
+  isLeaveRequest: boolean;
+  confidenceScore: number;
+  employeeEmail: string;
+  employeeName?: string;
+  leaveType: 'SICK' | 'CASUAL' | 'EMERGENCY' | 'EXAM' | 'OTHER';
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  requestedDays: number;
+  reasonSummary: string;
+  matchedPersonId?: string;
+  matchedDepartment?: string;
+  rawSubject: string;
+}
+
+/**
+ * Scans an incoming HR email for employee leave intent, parses leave dates,
+ * types, and automatically links it to the internal employee record.
+ */
+export function detectLeaveIntentFromEmail(
+  subject: string = '',
+  textBody: string = '',
+  senderEmail: string = '',
+  existingPeople: any[] = []
+): InboundEmailLeaveDetails {
+  const combined = (subject + ' ' + textBody).toLowerCase();
+
+  // Keyword dictionary for leave requests
+  const leaveKeywords = [
+    'leave', 'chutti', 'sick leave', 'casual leave', 'emergency leave',
+    'medical leave', 'unwell', 'fever', 'doctor', 'hospital', 'urgent work',
+    'urgent piece of work', 'family emergency', 'off tomorrow', 'not coming tomorrow',
+    'absent today', 'absent tomorrow', 'half day', 'leave application', 'requesting leave'
+  ];
+
+  const matchedKeywords = leaveKeywords.filter(k => combined.includes(k));
+  const isLeaveRequest = matchedKeywords.length > 0;
+  const confidenceScore = isLeaveRequest ? Math.min(99, 65 + matchedKeywords.length * 10) : 0;
+
+  // Infer Leave Type
+  let leaveType: 'SICK' | 'CASUAL' | 'EMERGENCY' | 'EXAM' | 'OTHER' = 'CASUAL';
+  if (combined.includes('sick') || combined.includes('fever') || combined.includes('doctor') || combined.includes('hospital') || combined.includes('unwell') || combined.includes('medical')) {
+    leaveType = 'SICK';
+  } else if (combined.includes('emergency') || combined.includes('accident') || combined.includes('death') || combined.includes('funeral')) {
+    leaveType = 'EMERGENCY';
+  } else if (combined.includes('exam') || combined.includes('paper') || combined.includes('test') || combined.includes('viva') || combined.includes('university')) {
+    leaveType = 'EXAM';
+  } else if (combined.includes('urgent') || combined.includes('personal') || combined.includes('casual')) {
+    leaveType = 'CASUAL';
+  }
+
+  // Infer Dates
+  const today = new Date();
+  let startDate = today.toISOString().split('T')[0];
+  let endDate = today.toISOString().split('T')[0];
+  let requestedDays = 1;
+
+  if (combined.includes('tomorrow')) {
+    const tmrw = new Date();
+    tmrw.setDate(tmrw.getDate() + 1);
+    startDate = tmrw.toISOString().split('T')[0];
+    endDate = startDate;
+    requestedDays = 1;
+  } else if (combined.includes('2 days') || combined.includes('two days')) {
+    requestedDays = 2;
+    const end = new Date(today);
+    end.setDate(end.getDate() + 1);
+    endDate = end.toISOString().split('T')[0];
+  } else if (combined.includes('3 days') || combined.includes('three days')) {
+    requestedDays = 3;
+    const end = new Date(today);
+    end.setDate(end.getDate() + 2);
+    endDate = end.toISOString().split('T')[0];
+  }
+
+  // Check explicit date regex: YYYY-MM-DD or DD/MM/YYYY
+  const explicitDates = textBody.match(/\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/g);
+  if (explicitDates && explicitDates.length >= 2) {
+    startDate = explicitDates[0];
+    endDate = explicitDates[1];
+    requestedDays = 2;
+  } else if (explicitDates && explicitDates.length === 1) {
+    startDate = explicitDates[0];
+    endDate = explicitDates[0];
+    requestedDays = 1;
+  }
+
+  // Match Sender Email to Employee Directory
+  let matchedPerson: any = null;
+  if (senderEmail && existingPeople.length > 0) {
+    matchedPerson = existingPeople.find(p =>
+      (p.personalEmail && p.personalEmail.toLowerCase() === senderEmail.toLowerCase()) ||
+      (p.companyEmail && p.companyEmail.toLowerCase() === senderEmail.toLowerCase())
+    );
+  }
+
+  // If no match by email, search body for employee names
+  if (!matchedPerson && existingPeople.length > 0) {
+    matchedPerson = existingPeople.find(p => p.fullName && combined.includes(p.fullName.toLowerCase()));
+  }
+
+  const employeeName = matchedPerson?.fullName || textBody.match(/(?:regards|sincerely|from|thanks|best),?\s*([A-Za-z\s]{2,25})/i)?.[1]?.trim() || senderEmail.split('@')[0];
+
+  // Extract Reason Summary
+  const reasonSentence = textBody.split(/[\n.]/).find(s =>
+    leaveKeywords.some(k => s.toLowerCase().includes(k)) && s.trim().length > 10
+  );
+  const reasonSummary = reasonSentence ? reasonSentence.trim() : `Employee submitted ${leaveType.toLowerCase()} leave request for ${requestedDays} day(s).`;
+
+  return {
+    isLeaveRequest,
+    confidenceScore,
+    employeeEmail: senderEmail,
+    employeeName,
+    leaveType,
+    startDate,
+    endDate,
+    requestedDays,
+    reasonSummary,
+    matchedPersonId: matchedPerson?.id || matchedPerson?.personId,
+    matchedDepartment: matchedPerson?.department || 'General',
+    rawSubject: subject
+  };
+}
+

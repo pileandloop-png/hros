@@ -119,6 +119,21 @@ export interface Application {
   initialEmailSentAt?: any;
   lastCandidateReplyAt?: any;
   nextFollowUpDueAt?: any;
+  screeningQuestionsAndAnswers?: { question: string; answer: string; passed?: boolean }[];
+  yearsOfExperience?: number;
+  aiFitScore?: number;
+  aiFitRecommendation?: 'BEST_FIT' | 'HIGHLY_RECOMMENDED' | 'SHORTLIST' | 'BORDERLINE' | 'UNDER_QUALIFIED';
+  aiFitReasoning?: string;
+  sourcedPlatform?: string;
+  interviewBooking?: {
+    interviewId: string;
+    scheduledDate: string;
+    timeSlot: string;
+    mode: 'ONLINE' | 'PHYSICAL';
+    meetingLinkOrLocation: string;
+    dispatchedAt: string;
+    interviewer: string;
+  };
   createdAt?: any;
   updatedAt?: any;
 }

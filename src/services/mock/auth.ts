@@ -11,9 +11,9 @@ export interface User {
 let activeUser: User | null = null;
 const authListeners = new Set<(user: User | null) => void>();
 
-// Load initial user from localStorage if saved
 try {
-  const saved = localStorage.getItem('hros_active_user');
+  const isLoggedOut = typeof window !== 'undefined' && localStorage.getItem('hros_logged_out') === 'true';
+  const saved = typeof window !== 'undefined' ? localStorage.getItem('hros_active_user') : null;
   if (saved) {
     const parsed = JSON.parse(saved);
     activeUser = {
@@ -22,6 +22,22 @@ try {
       displayName: parsed.displayName,
       getIdTokenResult: async () => ({ claims: { role: parsed.role } })
     };
+  } else if (!isLoggedOut && typeof window !== 'undefined') {
+    activeUser = {
+      uid: 'usr-admin',
+      email: 'pileandloop@gmail.com',
+      displayName: 'Pile & Loop Super Admin',
+      getIdTokenResult: async () => ({ claims: { role: 'SUPER_ADMIN' } })
+    };
+    localStorage.setItem(
+      'hros_active_user',
+      JSON.stringify({
+        uid: 'usr-admin',
+        email: 'pileandloop@gmail.com',
+        displayName: 'Pile & Loop Super Admin',
+        role: 'SUPER_ADMIN'
+      })
+    );
   }
 } catch {
   // Ignore localStorage errors
@@ -45,6 +61,7 @@ export const onAuthStateChanged = (
 export const setMockUser = (user: User | null, role: string) => {
   activeUser = user;
   if (user) {
+    localStorage.removeItem('hros_logged_out');
     localStorage.setItem(
       'hros_active_user',
       JSON.stringify({
@@ -56,6 +73,7 @@ export const setMockUser = (user: User | null, role: string) => {
     );
   } else {
     localStorage.removeItem('hros_active_user');
+    localStorage.setItem('hros_logged_out', 'true');
   }
   authListeners.forEach(cb => cb(activeUser));
 };

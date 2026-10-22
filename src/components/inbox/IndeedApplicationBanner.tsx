@@ -4,17 +4,22 @@ import {
   parseIndeedApplicationEmail,
   IndeedApplicationDetails,
   generateInitialCandidateEmail,
+  generate5ScreeningQuestions,
+  generateInitial5QuestionsEmail,
   calculateScreeningMatch,
   parseCvData
 } from '../../services/cvAnalysisService';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
   FileText,
   ExternalLink,
   Sparkles,
+  Globe,
+  Mail,
   UserX,
   UserCheck,
   ShieldAlert,
@@ -37,6 +42,7 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
   onPopulateReply
 }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const details: IndeedApplicationDetails = parseIndeedApplicationEmail(
     thread.subject,
@@ -59,13 +65,13 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
   const { educationClassification } = details;
   const isBelowBachelor = educationClassification.isBelowBachelor;
 
-  // 1-Click Action: Prepare Positive Interview Screening Email
-  const handlePrepareInterviewInvite = () => {
+  // 1-Click Action: Prepare 5 AI Screening Questions Email
+  const handlePrepare5QuestionsEmail = () => {
     const parsed = parseCvData(details.resumeSnippet || details.candidateName);
-    const analysis = calculateScreeningMatch(parsed, details.positionApplied);
-    const draft = generateInitialCandidateEmail(details.candidateName, details.positionApplied, analysis, false);
+    const questions = generate5ScreeningQuestions(parsed, details.positionApplied, '', parsed.skillsFound);
+    const draft = generateInitial5QuestionsEmail(details.candidateName, details.positionApplied, questions, 'Pile & Loop');
     onPopulateReply(draft.subject, draft.body);
-    toast.success(`Generated screening interview invitation for ${details.candidateName}`);
+    toast.success(`Generated 5 AI screening questions for ${details.candidateName}!`);
   };
 
   // 1-Click Action: Prepare Respectful Degree Qualification Notice (Polite Rejection)
@@ -244,15 +250,27 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
               )}
             </>
           ) : (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={handlePrepareInterviewInvite}
-              className="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              1-Click AI Interview Invite
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(`/browser-agent?url=${encodeURIComponent(details.indeedResumeUrl || '')}&name=${encodeURIComponent(details.candidateName)}&role=${encodeURIComponent(details.positionApplied)}`)}
+                className="bg-white text-slate-700 text-xs font-semibold shadow-2xs border-slate-300 hover:bg-slate-50"
+              >
+                <Globe className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                Run Browser Agent
+              </Button>
+
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handlePrepare5QuestionsEmail}
+                className="bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                Send 5 Screening Questions
+              </Button>
+            </div>
           )}
         </div>
       </div>

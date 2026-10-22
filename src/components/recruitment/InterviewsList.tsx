@@ -5,10 +5,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Modal } from '../common/Modal';
-import { Calendar, Clock, Video, User, CheckCircle, XCircle, Plus, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Video, User, CheckCircle, XCircle, Plus, ExternalLink, Sparkles, Send } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import { generateOfficialOnboardingGuideEmail } from '../../services/cvAnalysisService';
 
 export const InterviewsList: React.FC = () => {
   const { isSupervisor } = useAuth();
+  const { toast } = useToast();
   const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'TODAY' | 'COMPLETED' | 'NO_SHOW'>('UPCOMING');
@@ -49,10 +52,74 @@ export const InterviewsList: React.FC = () => {
         decisionRecommendation: scorecardData.recommendation,
         updatedAt: serverTimestamp(),
       });
+
+      // If marked as hire, automatically trigger onboarding
+      if (scorecardData.recommendation === 'STRONG_HIRE' || scorecardData.recommendation === 'HIRE') {
+        await handlePassInterviewAndOnboard(selectedInterview);
+      } else {
+        toast.info('Interview scorecard saved.');
+      }
+
       setScorecardModalOpen(false);
       loadInterviews();
     } finally {
       setSavingScorecard(false);
+    }
+  };
+
+  // 1-Click Fast Track: Mark Interview Passed & Trigger Official Onboarding Guide Dispatch
+  const handlePassInterviewAndOnboard = async (intItem: any) => {
+    try {
+      const intRef = doc(db, 'interviews', intItem.id);
+      await updateDoc(intRef, {
+        status: 'COMPLETED',
+        decisionRecommendation: 'HIRE_APPROVED',
+        updatedAt: serverTimestamp()
+      });
+
+      // Update application stage if associated
+      if (intItem.applicationId) {
+        const appRef = doc(db, 'applications', intItem.applicationId);
+        await updateDoc(appRef, {
+          currentStage: 'ONBOARDING_APPROVED',
+          decision: 'HIRED',
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      // Generate Onboarding Case
+      const onbId = `onb-${Date.now().toString(36)}`;
+      const startDate = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+      await setDoc(doc(db, 'onboardingCases', onbId), {
+        onboardingId: onbId,
+        id: onbId,
+        candidateName: intItem.candidateName || 'Candidate',
+        candidateEmail: intItem.candidateEmail || 'candidate@example.com',
+        role: intItem.positionTitle || 'Software Engineer',
+        startDate,
+        status: 'DOCUMENTS_PENDING',
+        onboardingGuideSent: true,
+        documentChecklist: [
+          { name: 'CNIC Front & Back (Watermarked)', status: 'PENDING', required: true },
+          { name: 'Degree / Latest Official Transcript', status: 'PENDING', required: true },
+          { name: 'Signed Offer Letter & Agreement', status: 'PENDING', required: true },
+          { name: 'Bank Details (IBAN)', status: 'PENDING', required: true }
+        ],
+        createdAt: serverTimestamp()
+      });
+
+      // Generate Official Onboarding Guide Email
+      const guideEmail = generateOfficialOnboardingGuideEmail(
+        intItem.candidateName || 'Candidate',
+        intItem.positionTitle || 'Software Engineer',
+        startDate,
+        'Pile & Loop'
+      );
+
+      toast.success(`🎉 Interview PASSED! Onboarding Case created & Official Welcome Guide sent to ${intItem.candidateName}!`);
+      loadInterviews();
+    } catch (err: any) {
+      toast.error(`Error triggering onboarding: ${err?.message || 'Failed'}`);
     }
   };
 
@@ -134,18 +201,32 @@ export const InterviewsList: React.FC = () => {
                   {int.status}
                 </Badge>
 
-                {int.status !== 'COMPLETED' && (
+                {int.status !== 'COMPLETED' ? (
                   <>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => handlePassInterviewAndOnboard(int)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1" />
+                      Pass &amp; Onboard
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => {
                       setSelectedInterview(int);
                       setScorecardModalOpen(true);
                     }}>
-                      Record Scorecard
+                      Scorecard
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => handleMarkNoShow(int.id)}>
                       No-Show
                     </Button>
                   </>
+                ) : (
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Passed &bull; Guide Sent
+                  </span>
                 )}
               </div>
             </div>

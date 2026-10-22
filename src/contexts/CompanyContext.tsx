@@ -29,7 +29,7 @@ export const COMPANY_PRESETS: Record<string, { label: string; profile: CompanyPr
     profile: {
       companyName: 'Pile and Loop',
       legalName: 'Pile & Loop (Pvt.) Ltd.',
-      tagline: 'Premium Keyboard Rugs, Desk Mats & Digital Craft',
+      tagline: 'AI Recruitment & Talent OS',
       websiteUrl: 'https://pileandloop.com',
       logoUrl: 'https://pileandloop.com/wp-content/uploads/2026/06/cropped-cropped-Transparent-LOGO-768x512-1.png',
       faviconUrl: '/favicon.svg',

@@ -142,7 +142,7 @@ export const Header: React.FC = () => {
             <div className="flex items-center space-x-2 truncate">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" />
               <span className="text-xs text-slate-400 group-hover:text-slate-600 font-medium truncate">
-                Search actions, candidates, kiosk...
+                Search candidates, jobs, resumes, pipeline...
               </span>
             </div>
             <div className="flex items-center space-x-1 shrink-0 ml-2">
@@ -228,7 +228,7 @@ export const Header: React.FC = () => {
             >
               {profile?.displayName ? profile.displayName[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : 'U')}
             </div>
-            <div className="text-left hidden xl:block max-w-[120px] truncate">
+            <div className="text-left hidden lg:block max-w-[220px]">
               <p className="text-xs font-semibold text-slate-900 leading-tight truncate">
                 {profile?.displayName || user?.email}
               </p>

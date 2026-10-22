@@ -22,18 +22,18 @@ import {
   CheckCircle2,
   Sparkles,
   Sliders,
-  Filter
+  Filter,
+  Calendar
 } from 'lucide-react';
 
-const KANBAN_STAGES: { key: ApplicationStage; title: string; color: string }[] = [
-  { key: 'NEW_APPLICATION', title: 'New Application', color: 'border-sky-500' },
-  { key: 'INITIAL_EMAIL_SENT', title: 'Initial Email Sent', color: 'border-blue-500' },
-  { key: 'SCREENING_RESPONSE_RECEIVED', title: 'Screening Received', color: 'border-indigo-500' },
-  { key: 'INTERVIEW_SCHEDULED', title: 'Interview Scheduled', color: 'border-purple-500' },
-  { key: 'DECISION_PENDING', title: 'Decision Pending', color: 'border-amber-500' },
-  { key: 'SELECTED', title: 'Selected', color: 'border-emerald-500' },
-  { key: 'ONBOARDING_DOCUMENTS_PENDING', title: 'Onboarding Pending', color: 'border-teal-500' },
-  { key: 'ONBOARDED', title: 'Onboarded', color: 'border-slate-800' },
+const KANBAN_STAGES: { key: ApplicationStage; title: string; color: string; badge: string }[] = [
+  { key: 'NEW_APPLICATION', title: '1. Inbound Ingested', color: 'border-sky-500', badge: 'Indeed / Web' },
+  { key: 'DISQUALIFIED', title: '2. Below Bachelor (Filtered)', color: 'border-amber-500', badge: 'Suppressed' },
+  { key: 'INITIAL_EMAIL_SENT', title: '3. 5 Questions Sent', color: 'border-blue-500', badge: 'Awaiting Reply' },
+  { key: 'SCREENING_RESPONSE_RECEIVED', title: '4. Candidate Replied', color: 'border-indigo-500', badge: 'AI Scored' },
+  { key: 'INTERVIEW_SCHEDULED', title: '5. Interview Scheduled', color: 'border-purple-500', badge: 'Google Meet' },
+  { key: 'ONBOARDING_APPROVED', title: '6. Interview Passed', color: 'border-teal-500', badge: 'Approved' },
+  { key: 'ONBOARDED', title: '7. Onboarding Active', color: 'border-emerald-500', badge: 'Guide Dispatched' },
 ];
 
 export const PipelineKanban: React.FC = () => {
@@ -65,14 +65,26 @@ export const PipelineKanban: React.FC = () => {
     try {
       const cSnap = await getDocs(collection(db, 'candidates'));
       const cMap = new Map();
-      cSnap.docs.forEach(d => cMap.set(d.id, d.data()));
+      cSnap.docs.forEach(d => {
+        const dData = d.data();
+        cMap.set(d.id, dData);
+        if (dData.candidateId) cMap.set(dData.candidateId, dData);
+      });
 
       const aSnap = await getDocs(collection(db, 'applications'));
-      const apps = aSnap.docs.map(d => ({
-        applicationId: d.id,
-        ...d.data(),
-        candidate: cMap.get(d.data().candidateId) || {},
-      }));
+      const apps = aSnap.docs.map(d => {
+        const aData = d.data();
+        const cand = cMap.get(aData.candidateId) || cMap.get(d.id) || {
+          fullName: aData.candidateName || aData.positionAppliedFor || 'Applicant',
+          personalEmail: aData.candidateEmail || 'candidate@example.com',
+          education: aData.education || 'Bachelor Degree'
+        };
+        return {
+          applicationId: d.id,
+          ...aData,
+          candidate: cand,
+        };
+      });
       setApplications(apps);
     } finally {
       setLoading(false);
@@ -202,41 +214,63 @@ export const PipelineKanban: React.FC = () => {
                         {app.candidate?.personalEmail}
                       </p>
 
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          (app.education || '').includes('Below') || app.currentStage === 'DISQUALIFIED'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {(app.education || '').includes('Below') || app.currentStage === 'DISQUALIFIED' ? '⚠️ Below Bachelor' : '✅ Bachelor+'}
+                        </span>
+                        {app.aiFitScore && (
+                          <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded">
+                            {app.aiFitScore}% Fit
+                          </span>
+                        )}
+                      </div>
+
                       {/* Advance Quick Action Bar */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100 text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setOfferCandidate(app);
-                            setOfferModalOpen(true);
-                          }}
-                          className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold flex items-center gap-1 transition"
-                          title="Issue Official Offer Letter"
-                        >
-                          <FileText className="w-3 h-3" /> Offer
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEvalCandidate(app);
-                            setEvalModalOpen(true);
-                          }}
-                          className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold flex items-center gap-1 transition"
-                          title="Score Candidate Matrix"
-                        >
-                          <Star className="w-3 h-3" /> Score
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCertCandidate(app);
-                            setCertModalOpen(true);
-                          }}
-                          className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 hover:bg-purple-100 font-semibold flex items-center gap-1 transition"
-                          title="Generate Completion Certificate"
-                        >
-                          <Award className="w-3 h-3" /> Cert
-                        </button>
+                        {app.currentStage === 'NEW_APPLICATION' && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/browser-agent?name=${encodeURIComponent(app.candidate?.fullName || 'Candidate')}&role=${encodeURIComponent(app.positionAppliedFor || 'Intern')}`)}
+                            className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold flex items-center gap-1 transition"
+                            title="Run Playwright Browser CV Extractor"
+                          >
+                            <Sparkles className="w-3 h-3 text-emerald-600" /> Scrape CV
+                          </button>
+                        )}
+                        {app.currentStage === 'SCREENING_RESPONSE_RECEIVED' && (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/recruitment/interviews')}
+                            className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 hover:bg-purple-100 font-semibold flex items-center gap-1 transition"
+                            title="Schedule Google Meet Interview"
+                          >
+                            <Calendar className="w-3 h-3" /> Book Call
+                          </button>
+                        )}
+                        {app.currentStage === 'INTERVIEW_SCHEDULED' && (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/recruitment/interviews')}
+                            className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold flex items-center gap-1 transition"
+                            title="Record Scorecard or Pass & Trigger Onboarding"
+                          >
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Pass &amp; Onboard
+                          </button>
+                        )}
+                        {app.currentStage === 'ONBOARDING_APPROVED' && (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/onboarding')}
+                            className="px-2 py-0.5 rounded bg-teal-50 text-teal-800 hover:bg-teal-100 font-semibold flex items-center gap-1 transition"
+                            title="View Active Onboarding Case"
+                          >
+                            <UserCheck className="w-3 h-3" /> Guide Active
+                          </button>
+                        )}
                       </div>
 
                       <div className="pt-1.5 flex items-center justify-between text-xs">

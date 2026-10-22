@@ -57,18 +57,33 @@ import {
   syncMailAccount,
   EmailAccountConfig
 } from '../../services/emailService';
+import { useSearchParams } from 'react-router-dom';
 import {
   createTeamInvite,
   getAllInvites,
   revokeInvite,
   TeamInvite
 } from '../../services/inviteService';
+import { SaaSPlansBilling } from './SaaSPlansBilling';
+import { ApiWebhooksManager } from './ApiWebhooksManager';
 
 export const SettingsPage: React.FC = () => {
   const { isSuperAdmin, isSupervisor } = useAuth();
   const toast = useToast();
   const { company, updateCompanyProfile, applyPreset, resetToDefaults } = useCompanyProfile();
-  const [activeTab, setActiveTab] = useState<'COMPANY' | 'RECRUITMENT' | 'INTERNSHIP' | 'EMAIL' | 'AI' | 'USERS' | 'INTEGRATIONS'>('COMPANY');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab')?.toUpperCase();
+  const initialTab = (tabParam === 'BILLING' || tabParam === 'API_KEYS' || tabParam === 'EMAIL' || tabParam === 'USERS' || tabParam === 'AI' || tabParam === 'RECRUITMENT' || tabParam === 'INTEGRATIONS')
+    ? (tabParam as any)
+    : 'COMPANY';
+
+  const [activeTab, setActiveTab] = useState<'COMPANY' | 'BILLING' | 'RECRUITMENT' | 'INTERNSHIP' | 'EMAIL' | 'AI' | 'USERS' | 'API_KEYS' | 'INTEGRATIONS'>(initialTab);
+
+  useEffect(() => {
+    if (tabParam && ['COMPANY', 'BILLING', 'RECRUITMENT', 'INTERNSHIP', 'EMAIL', 'AI', 'USERS', 'API_KEYS', 'INTEGRATIONS'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam]);
 
   // Dynamic Company & Brand State
   const [companyForm, setCompanyForm] = useState<CompanyProfile>(company);
@@ -472,19 +487,20 @@ export const SettingsPage: React.FC = () => {
           onClick={() => setActiveTab('COMPANY')}
           className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'COMPANY' ? 'border-emerald-600 text-emerald-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <Building className="w-3.5 h-3.5" /> Company &amp; Brand Profile
+          <Building className="w-3.5 h-3.5" /> Company &amp; Brand
+        </button>
+        <button
+          onClick={() => setActiveTab('BILLING')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'BILLING' ? 'border-emerald-600 text-emerald-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <DollarSign className="w-3.5 h-3.5 text-emerald-600" /> SaaS Plans &amp; AI Quotas
+          <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full ml-1">Pro</span>
         </button>
         <button
           onClick={() => setActiveTab('RECRUITMENT')}
           className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'RECRUITMENT' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <Clock className="w-3.5 h-3.5" /> Recruitment & Scheduling
-        </button>
-        <button
-          onClick={() => setActiveTab('INTERNSHIP')}
-          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'INTERNSHIP' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
-        >
-          <Calendar className="w-3.5 h-3.5" /> Internship Standards
+          <Clock className="w-3.5 h-3.5" /> Recruitment &amp; Scheduling
         </button>
         <button
           onClick={() => setActiveTab('EMAIL')}
@@ -497,14 +513,14 @@ export const SettingsPage: React.FC = () => {
           onClick={() => setActiveTab('AI')}
           className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'AI' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <Sparkles className="w-3.5 h-3.5" /> AI Copilot & Prompts
+          <Sparkles className="w-3.5 h-3.5" /> AI Copilot &amp; Prompts
         </button>
         {isSuperAdmin && (
           <button
             onClick={() => setActiveTab('USERS')}
             className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'USERS' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
           >
-            <Shield className="w-3.5 h-3.5" /> User Access & Roles
+            <Shield className="w-3.5 h-3.5" /> User Access &amp; Roles
             {pendingRequests.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
                 {pendingRequests.length}
@@ -513,10 +529,16 @@ export const SettingsPage: React.FC = () => {
           </button>
         )}
         <button
+          onClick={() => setActiveTab('API_KEYS')}
+          className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'API_KEYS' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
+        >
+          <Key className="w-3.5 h-3.5" /> API Keys &amp; Webhooks
+        </button>
+        <button
           onClick={() => setActiveTab('INTEGRATIONS')}
           className={`pb-3 px-4 flex items-center gap-1.5 border-b-2 transition ${activeTab === 'INTEGRATIONS' ? 'border-sky-600 text-sky-600 font-semibold' : 'border-transparent hover:text-slate-800'}`}
         >
-          <MessageSquare className="w-3.5 h-3.5" /> Discord & Supabase
+          <MessageSquare className="w-3.5 h-3.5" /> Discord &amp; Supabase
         </button>
       </div>
 
@@ -1737,6 +1759,12 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* COMMERCIAL SAAS PLANS & BILLING */}
+        {activeTab === 'BILLING' && <SaaSPlansBilling />}
+
+        {/* REST API KEYS & WEBHOOKS HUB */}
+        {activeTab === 'API_KEYS' && <ApiWebhooksManager />}
       </div>
 
       {/* Add User Modal */}

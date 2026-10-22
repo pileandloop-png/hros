@@ -9,40 +9,28 @@ import { FileText, Edit2, Plus, Copy, Check } from 'lucide-react';
 
 const SEED_TEMPLATES = [
   {
-    type: 'INITIAL_CANDIDATE_EMAIL',
-    title: 'Initial Candidate Outreach',
-    subject: 'Pile & Loop: Thank you for your application for {{position}}',
-    bodyTemplate: 'Dear {{candidateName}},\n\nThank you for applying for the {{position}} internship at Pile & Loop. We have received your application and would like to learn more about your experience.\n\nOur internship program is a remote, learning-based opportunity with approximately 5 productive hours per day (Monday-Saturday, core window 09:00 AM - 04:00 PM PKT).\n\nPlease let us know if this aligns with your availability, and reply with links to your portfolio or past projects.\n\nBest regards,\n{{hrRepresentativeName}}\nPile & Loop Human Resources',
+    type: 'FIVE_QUESTION_SCREENING',
+    title: '5 AI Screening Questions (Automated Assessment)',
+    subject: 'Application for {{position}} at Pile & Loop - Initial Screening Questions',
+    bodyTemplate: 'Dear {{candidateName}},\n\nThank you for applying for the {{position}} opening at Pile & Loop! We have reviewed your credentials and would like to proceed with the next phase of our automated talent screening.\n\nPlease reply directly to this email answering the following 5 questions:\n\nQ1 [Core Technical Competency]:\nCan you describe your hands-on experience with our core stack and any complex production projects you built?\n\nQ2 [Portfolio & Project]:\nPlease share your active GitHub / Figma / portfolio link and explain the hardest bug or architectural challenge you solved.\n\nQ3 [Working Hours & Punctuality]:\nAre you available to commit to our core working hours (09:00 AM - 04:00 PM PKT / 40 hours per week) on a consistent daily schedule?\n\nQ4 [Notice Period & Start Date]:\nWhat is your earliest confirmed start date, and what is your notice period with any current commitments?\n\nQ5 [Degree Prerequisite Verification]:\nCan you please confirm your university, degree title, and graduation year? (Note: A 4-year Bachelor degree is required).\n\nBest regards,\nTalent Acquisition Team\nPile & Loop',
+  },
+  {
+    type: 'BELOW_BACHELOR_NOTICE',
+    title: 'Below-Bachelor Educational Prerequisite Notice (Polite Rejection)',
+    subject: 'Update regarding your application for {{position}} at Pile & Loop',
+    bodyTemplate: 'Dear {{candidateName}},\n\nThank you for your interest in Pile & Loop and for applying for the {{position}} opening.\n\nWe have reviewed your profile and application details. Our prerequisite for this role necessitates a completed or final-semester 4-year Bachelor degree (BS/BSc/BE in Computer Science, Software Engineering, or related field).\n\nBased on your credentials, your highest detected qualification is below our current undergraduate degree prerequisite. Therefore, we are unable to advance your application for this opening at this time.\n\nIf you are currently enrolled in a recognized university degree program and graduating soon, please feel free to reply with your projected graduation date.\n\nWe sincerely appreciate your interest and wish you the best in your academic and professional endeavors.\n\nWarm regards,\nTalent Acquisition Team\nPile & Loop',
+  },
+  {
+    type: 'OFFICIAL_ONBOARDING_GUIDE',
+    title: 'Official Onboarding Guide & First Day Instructions (Interview Passed)',
+    subject: 'Welcome to Pile & Loop! Official Onboarding Guide & First Day Instructions [{{position}}]',
+    bodyTemplate: 'Dear {{candidateName}},\n\nCongratulations! Following your successful interview with our hiring team, you have officially PASSED the evaluation and have been selected for the {{position}} position at Pile & Loop!\n\nWelcome to the team! Below is your Official Onboarding Guide and orientation checklist for your first day:\n\n1. REPORTING & COMMENCEMENT DETAILS:\n• Official Start Date: {{startDate}}\n• Daily Reporting Hours: 09:00 AM - 04:00 PM PKT\n• Office Location: Suite 402, Al-Hafeez Commercial Complex, Main Boulevard, Gulberg III, Lahore, Pakistan\n\n2. PRE-ONBOARDING DOCUMENTATION CHECKLIST:\nPlease email digital copies of the following prior to your start date:\n[ ] 1. Scanned Copy of CNIC (Front & Back)\n[ ] 2. University Degree or Official Transcript\n[ ] 3. Emergency Contact Details\n[ ] 4. Bank Account Details (IBAN) for payroll\n\n3. TOOLING ACCESS:\n• Slack / Discord invite sent to this email.\n• Portal access: https://pileandloop.com/onboarding\n\nPlease reply confirming receipt of this onboarding guide.\n\nWarm regards,\nPeople Operations & Human Resources\nPile & Loop',
   },
   {
     type: 'INTERVIEW_INVITATION',
-    title: 'Interview Invitation',
-    subject: 'Interview Invitation: Pile & Loop - {{position}}',
-    bodyTemplate: 'Dear {{candidateName}},\n\nFollowing your initial review, we are pleased to invite you to an interview for the {{position}} internship.\n\nPlease select a time slot that suits you best using our calendar booking link:\n{{bookingLink}}\n\nWe look forward to speaking with you!\n\nBest regards,\nPile & Loop HR Team',
-  },
-  {
-    type: 'SELECTION',
-    title: 'Selection & Offer Notification',
-    subject: 'Congratulations! Selection for Pile & Loop {{position}} Internship',
-    bodyTemplate: 'Dear {{candidateName}},\n\nWe are excited to inform you that you have been selected for the {{position}} internship at Pile & Loop!\n\nYour internship will commence on {{startDate}} for a duration of 4 months. Please review the attached Internship Agreement and prepare your onboarding documentation (CNIC copies, transcript, internet speed test, and PC specs).\n\nWelcome to the Pile & Loop team!\n\nBest regards,\n{{hrRepresentativeName}}',
-  },
-  {
-    type: 'FOLLOW_UP_1',
-    title: 'Follow-Up 1',
-    subject: 'Following up: Your application with Pile & Loop',
-    bodyTemplate: 'Dear {{candidateName}},\n\nI hope you are doing well. We are following up regarding our earlier message about your application for the {{position}} internship.\n\nPlease let us know if you remain interested in proceeding with the selection process.\n\nBest regards,\n{{hrRepresentativeName}}\nPile & Loop Human Resources',
-  },
-  {
-    type: 'FOLLOW_UP_2',
-    title: 'Follow-Up 2 (Final Follow-up)',
-    subject: 'Final follow-up: Pile & Loop {{position}} Application',
-    bodyTemplate: 'Dear {{candidateName}},\n\nWe have not heard back regarding your application for the {{position}} internship. As per our recruitment policy, this is our final follow-up.\n\nIf we do not hear from you within 48 hours, we will close your application. You are always welcome to apply for future vacancies.\n\nBest regards,\nPile & Loop HR',
-  },
-  {
-    type: 'NOT_SELECTED',
-    title: 'Application Not Selected',
-    subject: 'Your application with Pile & Loop',
-    bodyTemplate: 'Dear {{candidateName}},\n\nThank you for taking the time to apply for the {{position}} internship at Pile & Loop and speaking with our team.\n\nAfter careful consideration, we have decided to move forward with other candidates whose profiles more closely match our current project needs. We will keep your CV on file for future openings.\n\nWe wish you all the best in your career pursuits.\n\nSincerely,\nPile & Loop Recruitment Team',
+    title: 'Google Meet Technical Interview Invitation',
+    subject: 'Interview Scheduled: Pile & Loop - {{position}}',
+    bodyTemplate: 'Dear {{candidateName}},\n\nCongratulations! Following your screening score, we are pleased to confirm your technical interview for the {{position}} position.\n\nInterview Details:\n• Mode: Google Meet Video Call\n• Link: {{meetingLink}}\n• Date & Time: {{timeSlot}} (PKT)\n\nPlease test your camera and microphone beforehand and join 5 minutes early.\n\nBest regards,\nPile & Loop HR Team',
   }
 ];
 

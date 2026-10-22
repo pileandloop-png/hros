@@ -20,7 +20,9 @@ import {
   UserX,
   X,
   ExternalLink,
-  Scan
+  Scan,
+  DollarSign,
+  Key
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -35,95 +37,52 @@ export const Sidebar: React.FC = () => {
       icon: LayoutDashboard,
     },
     {
-      label: 'Recruitment',
-      icon: Briefcase,
-      children: [
-        { label: 'Vacancies', path: '/recruitment/vacancies' },
-        { label: 'Applications', path: '/recruitment/applications' },
-        { label: 'Candidates', path: '/recruitment/candidates' },
-        { label: 'Pipeline Kanban', path: '/recruitment/pipeline' },
-        { label: 'Interviews', path: '/recruitment/interviews' },
-        { label: 'Import CSV', path: '/recruitment/import' },
-      ],
-    },
-    {
-      label: 'Communication',
+      label: 'Inbound Ingestion',
       icon: Mail,
       children: [
-        { label: 'Inbox', path: '/inbox' },
-        { label: 'Assigned to Me', path: '/inbox/assigned' },
-        { label: 'Sent', path: '/inbox/sent' },
-        { label: 'Templates', path: '/inbox/templates' },
+        { label: 'Indeed & Email Inbox', path: '/inbox' },
+        { label: 'Browser Agent (Playwright)', path: '/browser-agent' },
+        { label: 'Import CSV / Resumes', path: '/recruitment/import' },
       ],
     },
     {
-      label: 'Onboarding',
+      label: 'Hiring Pipeline',
+      icon: Briefcase,
+      children: [
+        { label: 'Pipeline Kanban', path: '/recruitment/pipeline' },
+        { label: 'Applications Table', path: '/recruitment/applications' },
+        { label: 'Candidate Profiles', path: '/recruitment/candidates' },
+        { label: 'Job Openings & JD', path: '/recruitment/vacancies' },
+        { label: 'Interviews & Scorecards', path: '/recruitment/interviews' },
+      ],
+    },
+    {
+      label: 'Onboarding & Guide',
       icon: UserCheck,
       children: [
-        { label: 'Active Cases', path: '/onboarding' },
-        { label: 'Documents Review', path: '/onboarding/documents' },
+        { label: 'Active Onboarding Cases', path: '/onboarding' },
+        { label: 'Document Review', path: '/onboarding/documents' },
       ],
     },
     {
-      label: 'People',
-      icon: Users,
+      label: 'Templates & Outbox',
+      icon: FileSpreadsheet,
       children: [
-        { label: 'Active Interns', path: '/people/interns' },
-        { label: 'Employees & Team', path: '/people/team' },
-        { label: 'Alumni / Completed', path: '/people/alumni' },
+        { label: 'AI Email Templates', path: '/inbox/templates' },
+        { label: 'Sent History', path: '/inbox/sent' },
       ],
     },
     {
-      label: 'Attendance',
-      icon: Clock,
+      label: 'Commercial & Scale',
+      icon: DollarSign,
       children: [
-        { label: 'Live Attendance', path: '/attendance/live' },
-        { label: 'Biometric Kiosk', path: '/attendance/kiosk' },
-        { label: 'Attendance Analytics', path: '/attendance/analytics' },
-        { label: 'Timesheets', path: '/attendance/timesheets' },
+        { label: 'SaaS Plans & AI Quotas', path: '/settings?tab=billing' },
+        { label: 'API Keys & Webhooks', path: '/settings?tab=api_keys' },
+        { label: 'Security Audit Trail', path: '/audit' },
       ],
     },
     {
-      label: 'Leave',
-      icon: Calendar,
-      children: [
-        { label: 'Leave Requests', path: '/leave' },
-      ],
-    },
-    {
-      label: 'Work & Tasks',
-      icon: CheckSquare,
-      children: [
-        { label: 'HR Tasks', path: '/work/tasks' },
-        { label: 'Daily Logs', path: '/work/daily-logs' },
-        { label: 'Weekly Reports', path: '/work/weekly-reports' },
-      ],
-    },
-    {
-      label: 'Performance',
-      icon: Award,
-      path: '/performance',
-    },
-    {
-      label: 'Offboarding',
-      icon: UserX,
-      children: [
-        { label: 'Ending Soon', path: '/offboarding/ending-soon' },
-        { label: 'Offboarding Cases', path: '/offboarding' },
-      ],
-    },
-    {
-      label: 'Reports',
-      icon: BarChart3,
-      path: '/reports',
-    },
-    {
-      label: 'Audit Log',
-      icon: ShieldCheck,
-      path: '/audit',
-    },
-    {
-      label: 'Settings',
+      label: 'System Settings',
       icon: Settings,
       path: '/settings',
     },
@@ -131,13 +90,10 @@ export const Sidebar: React.FC = () => {
 
   const teamNav = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'My Attendance', path: '/attendance/my', icon: Clock },
-    { label: 'Biometric Kiosk', path: '/attendance/kiosk', icon: Scan },
-    { label: 'My Timesheet', path: '/attendance/timesheets', icon: FileSpreadsheet },
-    { label: 'Leave Requests', path: '/leave', icon: Calendar },
-    { label: 'My Daily Log', path: '/work/daily-logs', icon: CheckSquare },
-    { label: 'Weekly Reports', path: '/work/weekly-reports', icon: Award },
-    { label: 'Team Directory', path: '/people/interns', icon: Users },
+    { label: 'Inbound Inbox', path: '/inbox', icon: Mail },
+    { label: 'Pipeline Kanban', path: '/recruitment/pipeline', icon: Briefcase },
+    { label: 'Browser Agent', path: '/browser-agent', icon: Scan },
+    { label: 'Onboarding Cases', path: '/onboarding', icon: UserCheck },
   ];
 
   const navItems = isTeamMemberOnly ? teamNav : hrNav;

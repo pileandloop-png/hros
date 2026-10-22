@@ -1,6 +1,6 @@
 import { initialSeedData, SeedCollectionMap } from './seedData';
 
-const STORAGE_KEY = 'hros_db_store_v1';
+const STORAGE_KEY = 'hros_million_dollar_ats_v2';
 
 class PersistentStore {
   private data: SeedCollectionMap = {};
@@ -12,61 +12,26 @@ class PersistentStore {
 
   private load() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
       if (stored) {
         this.data = JSON.parse(stored);
-        // Ensure emailThreads and their messages are merged if missing
-        if (!this.data['emailThreads'] || Object.keys(this.data['emailThreads']).length === 0) {
-          this.data['emailThreads'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads'] || {}));
-          Object.keys(initialSeedData).forEach(key => {
-            if (key.startsWith('emailThreads/')) {
-              this.data[key] = JSON.parse(JSON.stringify(initialSeedData[key]));
-            }
-          });
-          this.save();
-        }
-
-        // Ensure attendance with biometric records is merged if missing
-        if (!this.data['attendance'] || Object.keys(this.data['attendance']).length === 0) {
-          this.data['attendance'] = JSON.parse(JSON.stringify(initialSeedData['attendance'] || {}));
-          this.save();
-        }
-
-        // Ensure applications collection is merged
-        if (!this.data['applications'] || Object.keys(this.data['applications']).length === 0) {
-          this.data['applications'] = JSON.parse(JSON.stringify(initialSeedData['applications'] || {}));
-          this.save();
-        }
-
-        // Ensure Shiza candidate and application exist
-        if (!this.data['candidates']?.['cand-shiza']) {
-          this.data['candidates'] = this.data['candidates'] || {};
-          this.data['candidates']['cand-shiza'] = JSON.parse(JSON.stringify(initialSeedData['candidates']['cand-shiza']));
-          this.save();
-        }
-        if (!this.data['applications']?.['app-shiza-1']) {
-          this.data['applications'] = this.data['applications'] || {};
-          this.data['applications']['app-shiza-1'] = JSON.parse(JSON.stringify(initialSeedData['applications']['app-shiza-1']));
-          this.save();
-        }
-
-        // Ensure Leave test email exists
-        if (!this.data['emailThreads']?.['th-leave-saad']) {
-          this.data['emailThreads'] = this.data['emailThreads'] || {};
-          this.data['emailThreads']['th-leave-saad'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads']['th-leave-saad']));
-          this.data['emailThreads/th-leave-saad/messages'] = JSON.parse(JSON.stringify(initialSeedData['emailThreads/th-leave-saad/messages']));
-          this.save();
-        }
-
-        // Ensure People contract tenure fields are refreshed
-        if (this.data['people']?.['usr-member'] && !this.data['people']['usr-member'].contractType) {
-          this.data['people']['usr-member'] = { ...this.data['people']['usr-member'], ...initialSeedData['people']['usr-member'] };
-          this.data['people']['usr-intern'] = { ...this.data['people']['usr-intern'], ...initialSeedData['people']['usr-intern'] };
-          this.save();
-        }
+        
+        // Ensure all top-level collections from initialSeedData are populated
+        Object.keys(initialSeedData).forEach(col => {
+          if (!this.data[col] || Object.keys(this.data[col]).length === 0) {
+            this.data[col] = JSON.parse(JSON.stringify(initialSeedData[col]));
+          } else {
+            // Merge any missing documents in the collection
+            Object.keys(initialSeedData[col]).forEach(docId => {
+              if (!this.data[col][docId]) {
+                this.data[col][docId] = JSON.parse(JSON.stringify(initialSeedData[col][docId]));
+              }
+            });
+          }
+        });
+        this.save();
       } else {
         this.data = JSON.parse(JSON.stringify(initialSeedData));
-        this.save();
       }
     } catch {
       this.data = JSON.parse(JSON.stringify(initialSeedData));

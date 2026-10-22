@@ -15,6 +15,7 @@ import { PipelineKanban } from './components/recruitment/PipelineKanban';
 import { InterviewsList } from './components/recruitment/InterviewsList';
 import { CsvImporter } from './components/recruitment/CsvImporter';
 import { DuplicateReviewQueue } from './components/recruitment/DuplicateReviewQueue';
+import { BrowserScraperConsole } from './components/recruitment/BrowserScraperConsole';
 import { OutlookInbox } from './components/inbox/OutlookInbox';
 import { EmailTemplates } from './components/inbox/EmailTemplates';
 import { OnboardingList } from './components/onboarding/OnboardingList';
@@ -62,6 +63,7 @@ export const App: React.FC = () => {
                   <Route index element={<Dashboard />} />
 
                   {/* Recruitment (HR Only) */}
+                  <Route path="browser-agent" element={<ProtectedRoute requireHr><BrowserScraperConsole /></ProtectedRoute>} />
                   <Route path="recruitment/vacancies" element={<ProtectedRoute requireHr><VacanciesList /></ProtectedRoute>} />
                   <Route path="recruitment/applications" element={<ProtectedRoute requireHr><ApplicationsTable /></ProtectedRoute>} />
                   <Route path="recruitment/candidates" element={<ProtectedRoute requireHr><ApplicationsTable /></ProtectedRoute>} />

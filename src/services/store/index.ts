@@ -1,6 +1,6 @@
 import { initialSeedData, SeedCollectionMap } from './seedData';
 
-const STORAGE_KEY = 'hros_million_dollar_ats_v2';
+const STORAGE_KEY = 'hros_million_dollar_ats_v3';
 
 class PersistentStore {
   private data: SeedCollectionMap = {};

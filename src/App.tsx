@@ -20,6 +20,7 @@ import { OutlookInbox } from './components/inbox/OutlookInbox';
 import { EmailTemplates } from './components/inbox/EmailTemplates';
 import { OnboardingList } from './components/onboarding/OnboardingList';
 import { PeopleDirectory } from './components/people/PeopleDirectory';
+import { WorkforceRegistry } from './components/people/WorkforceRegistry';
 import { LiveAttendance } from './components/attendance/LiveAttendance';
 import { Timesheets } from './components/attendance/Timesheets';
 import { AttendanceKiosk } from './components/attendance/AttendanceKiosk';
@@ -83,10 +84,12 @@ export const App: React.FC = () => {
                   <Route path="onboarding" element={<ProtectedRoute requireHr><OnboardingList /></ProtectedRoute>} />
                   <Route path="onboarding/documents" element={<ProtectedRoute requireHr><OnboardingList /></ProtectedRoute>} />
 
-                  {/* People & Directory */}
-                  <Route path="people/interns" element={<PeopleDirectory />} />
-                  <Route path="people/team" element={<PeopleDirectory />} />
-                  <Route path="people/alumni" element={<PeopleDirectory />} />
+                  {/* People & Workforce Lifecycle */}
+                  <Route path="workforce" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />
+                  <Route path="people/workforce" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />
+                  <Route path="people/interns" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />
+                  <Route path="people/team" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />
+                  <Route path="people/alumni" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />
 
                   {/* Attendance & Timesheets */}
                   <Route path="attendance/live" element={<ProtectedRoute requireHr><LiveAttendance /></ProtectedRoute>} />

@@ -19,12 +19,16 @@ import {
   ArrowRight,
   ExternalLink,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  ShieldCheck,
+  FileCheck
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { store } from '../../services/store';
 
 export const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -44,6 +48,45 @@ export const Dashboard: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [people, setPeople] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadPeople = () => {
+      const records = store.getCollection('people') || {};
+      setPeople(Object.values(records));
+    };
+    loadPeople();
+    const unsub = store.subscribe((col) => {
+      if (col === 'people') loadPeople();
+    });
+    return () => unsub();
+  }, []);
+
+  const calculateDaysRemaining = (expectedEnd: any) => {
+    if (!expectedEnd) return null;
+    const end = expectedEnd.toDate ? expectedEnd.toDate() : new Date(expectedEnd);
+    const now = new Date();
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const isNewlyOnboarded = (joinDate: any) => {
+    if (!joinDate) return false;
+    const start = new Date(joinDate);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 14;
+  };
+
+  const activeStaff = people.filter(p => p.status === 'ACTIVE');
+  const activeInterns = people.filter(p => p.status === 'ACTIVE' && (p.employmentType === 'INTERNSHIP' || (p.role && p.role.toLowerCase().includes('intern')) || (p.jobTitle && p.jobTitle.toLowerCase().includes('intern'))));
+  const endingSoonCount = people.filter(p => {
+    if (p.status !== 'ACTIVE') return false;
+    const days = calculateDaysRemaining(p.contractEndDate || p.expectedEndDate);
+    return days !== null && days <= 15 && days >= 0;
+  }).length;
+  const newJoinersCount = people.filter(p => p.status === 'ACTIVE' && isNewlyOnboarded(p.joiningDate || p.joinDate)).length;
+  const offboardedCount = people.filter(p => p.status === 'OFFBOARDED' || p.status === 'COMPLETED').length;
+  const terminatedCount = people.filter(p => p.status === 'TERMINATED').length;
 
   const handleRefreshTelemetry = () => {
     setLoading(true);
@@ -111,6 +154,16 @@ export const Dashboard: React.FC = () => {
           >
             <TrendingUp className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
             Pipeline Kanban
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/workforce')}
+            className="text-xs font-semibold border-indigo-200 bg-indigo-50/40 text-indigo-700 hover:bg-indigo-50"
+          >
+            <Users className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+            Workforce Registry
           </Button>
         </div>
       </div>
@@ -403,6 +456,177 @@ export const Dashboard: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Workforce & Tenure Radar Section */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                Workforce &amp; Internship Tenure Radar
+              </h2>
+              <Badge variant="info">Live Contract Watchlist</Badge>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Real-time countdown clocks, onboarding document ingestion status, and offboarding access revocation audit logs.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/workforce')}
+              className="text-xs font-semibold"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
+              Ingest Onboarding Doc
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => navigate('/workforce')}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs"
+            >
+              <span>View Full Registry</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Quick Lifecycle Metric Badges */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 my-5">
+          <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-xl cursor-pointer hover:border-slate-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Active Staff</span>
+            <p className="text-xl font-extrabold text-slate-900 mt-0.5">{activeStaff.length}</p>
+          </div>
+          <div className="bg-indigo-50/50 border border-indigo-200/60 p-3 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-indigo-700 uppercase">Active Interns</span>
+            <p className="text-xl font-extrabold text-indigo-600 mt-0.5">{activeInterns.length}</p>
+          </div>
+          <div className="bg-amber-50/60 border border-amber-200/80 p-3 rounded-xl cursor-pointer hover:border-amber-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-amber-700 uppercase">Ending Soon (&le;15d)</span>
+            <p className="text-xl font-extrabold text-amber-600 mt-0.5">{endingSoonCount}</p>
+          </div>
+          <div className="bg-emerald-50/60 border border-emerald-200/70 p-3 rounded-xl cursor-pointer hover:border-emerald-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-emerald-700 uppercase">New Joiners (&le;14d)</span>
+            <p className="text-xl font-extrabold text-emerald-600 mt-0.5">{newJoinersCount}</p>
+          </div>
+          <div className="bg-slate-50 border border-slate-200/70 p-3 rounded-xl cursor-pointer hover:border-slate-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-slate-600 uppercase">Alumni / Offboarded</span>
+            <p className="text-xl font-extrabold text-slate-700 mt-0.5">{offboardedCount}</p>
+          </div>
+          <div className="bg-rose-50/60 border border-rose-200/70 p-3 rounded-xl cursor-pointer hover:border-rose-300 transition-colors" onClick={() => navigate('/workforce')}>
+            <span className="text-[10px] font-bold text-rose-700 uppercase">Terminated / Exited</span>
+            <p className="text-xl font-extrabold text-rose-600 mt-0.5">{terminatedCount}</p>
+          </div>
+        </div>
+
+        {/* Live Employee Roster Table */}
+        <div className="border border-slate-200/80 rounded-xl overflow-hidden">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+              <tr>
+                <th className="py-2.5 px-4">Employee / Intern</th>
+                <th className="py-2.5 px-4">Role &amp; Type</th>
+                <th className="py-2.5 px-4">Timeline</th>
+                <th className="py-2.5 px-4">Tenure Clock</th>
+                <th className="py-2.5 px-4">Handover / Clearance</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {people.slice(0, 5).map((person) => {
+                const days = calculateDaysRemaining(person.contractEndDate || person.expectedEndDate);
+                const isEnding = days !== null && days <= 15 && days >= 0;
+                const isOffboarded = person.status === 'OFFBOARDED' || person.status === 'COMPLETED';
+                const isTerminated = person.status === 'TERMINATED';
+
+                return (
+                  <tr key={person.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-[11px] text-slate-700 shrink-0">
+                          {person.fullName?.charAt(0) || 'U'}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 leading-tight">{person.fullName}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">{person.email || person.personalEmail}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-medium text-slate-800">{person.jobTitle || person.designation || 'Staff'}</p>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                        {person.employmentType || 'INTERNSHIP'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600">
+                      <div className="text-[11px] font-mono">
+                        <span>{person.joiningDate || person.joinDate || 'N/A'}</span>
+                        <span className="text-slate-400 mx-1">&rarr;</span>
+                        <span>{person.contractEndDate || person.expectedEndDate || 'Permanent'}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {isTerminated ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          Exited / Terminated
+                        </span>
+                      ) : isOffboarded ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                          Alumni Completed
+                        </span>
+                      ) : isEnding ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {days}d Remaining (Ending Soon)
+                        </span>
+                      ) : days !== null ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <Clock className="w-3 h-3 mr-1 text-emerald-600" />
+                          {days}d Remaining
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+                          Permanent Active
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {person.offboarding ? (
+                        person.offboarding.accessRevoked ? (
+                          <span className="inline-flex items-center text-[10px] text-emerald-700 font-medium">
+                            <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                            100% Revoked
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] text-amber-700 font-medium">
+                            <AlertCircle className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                            Revocation In Progress
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-[10px] text-slate-400">All Credentials Active</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate('/workforce')}
+                        className="text-[11px] h-7 px-2.5"
+                      >
+                        Manage
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

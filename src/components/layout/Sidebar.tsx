@@ -65,6 +65,15 @@ export const Sidebar: React.FC = () => {
       ],
     },
     {
+      label: 'Workforce & Tenure',
+      icon: Users,
+      children: [
+        { label: 'Workforce Registry', path: '/workforce' },
+        { label: 'Offboarding & Handover', path: '/offboarding' },
+        { label: 'Ex-Employees & Alumni', path: '/people/alumni' },
+      ],
+    },
+    {
       label: 'Templates & Outbox',
       icon: FileSpreadsheet,
       children: [

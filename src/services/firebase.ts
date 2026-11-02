@@ -1,5 +1,5 @@
 export * from './store';
-export { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setMockUser } from './mock/auth';
+export { getAuth, signInWithEmailAndPassword, signInWithPhoneLast4, signOut, onAuthStateChanged, setMockUser } from './mock/auth';
 export { getStorage, ref, uploadBytesResumable, getDownloadURL } from './mock/storage';
 export { getFunctions, httpsCallable } from './mock/functions';
 export { initializeApp } from './mock/app';

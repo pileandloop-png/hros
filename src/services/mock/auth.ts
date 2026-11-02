@@ -174,6 +174,41 @@ export const signOut = async (_auth?: any): Promise<void> => {
   setMockUser(null, '');
 };
 
+export const signInWithPhoneLast4 = async (
+  last4Digits: string
+): Promise<{ user: User; person: any }> => {
+  const clean = last4Digits.replace(/\D/g, '').trim();
+  if (clean.length < 4) {
+    throw new Error('Please enter at least 4 digits of your registered mobile phone number.');
+  }
+
+  const people = store.getCollection('people');
+  const matched = Object.values(people).filter((p: any) => {
+    if (!p.phone) return false;
+    const phoneClean = p.phone.replace(/\D/g, '');
+    return phoneClean.endsWith(clean);
+  });
+
+  if (matched.length === 0) {
+    throw new Error(`No active team member found with mobile number ending in ...${clean}. Please check with HR.`);
+  }
+
+  const person = matched[0];
+  if (person.status === 'INACTIVE' || person.status === 'TERMINATED') {
+    throw new Error(`This account (${person.fullName}) is currently inactive or offboarded.`);
+  }
+
+  const user: User = {
+    uid: person.uid || person.id,
+    email: person.email,
+    displayName: person.fullName || person.displayName || 'Staff Member',
+    getIdTokenResult: async () => ({ claims: { role: person.role || 'TEAM_MEMBER' } })
+  };
+
+  setMockUser(user, person.role || 'TEAM_MEMBER');
+  return { user, person };
+};
+
 // Sign Up & Request Access function
 export const submitUserRequest = async (data: {
   fullName: string;

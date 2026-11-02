@@ -29,6 +29,7 @@ import { Badge } from '../common/Badge';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { store } from '../../services/store';
+import { checkIn, checkOut } from '../../services/api';
 
 export const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -87,6 +88,59 @@ export const Dashboard: React.FC = () => {
   const newJoinersCount = people.filter(p => p.status === 'ACTIVE' && isNewlyOnboarded(p.joiningDate || p.joinDate)).length;
   const offboardedCount = people.filter(p => p.status === 'OFFBOARDED' || p.status === 'COMPLETED').length;
   const terminatedCount = people.filter(p => p.status === 'TERMINATED').length;
+
+  const [isCheckedInToday, setIsCheckedInToday] = useState(false);
+  const [stampLoading, setStampLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
+    const checkAtt = () => {
+      const records = store.getCollection('attendance') || {};
+      const found = Object.values(records).find((r: any) =>
+        (r.userId === user.uid || r.userId === profile?.uid) && r.dateKey === today
+      );
+      setIsCheckedInToday(found?.status === 'CHECKED_IN');
+    };
+    checkAtt();
+    const unsub = store.subscribe((col) => {
+      if (col === 'attendance') checkAtt();
+    });
+    return () => unsub();
+  }, [user, profile]);
+
+  const handleQuickPunch = async () => {
+    if (!user) return;
+    setStampLoading(true);
+    const nowPkt = new Date().toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Karachi',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    try {
+      if (!isCheckedInToday) {
+        await checkIn('1-Click Dashboard Timestamp Punch', undefined, {
+          uid: user.uid,
+          displayName: profile?.displayName || user.email || 'Team Member',
+          department: profile?.department,
+          role: profile?.role
+        });
+        toast.success(`Check-In Timestamp recorded: ${nowPkt} PKT!`);
+      } else {
+        await checkOut({
+          tasksCompleted: '1-Click Dashboard Punch Out',
+          customUser: { uid: user.uid || 'usr-admin', displayName: profile?.displayName || user.email || 'Team Member' }
+        });
+        toast.info(`Check-Out Timestamp recorded: ${nowPkt} PKT!`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Timestamp punch failed');
+    } finally {
+      setStampLoading(false);
+    }
+  };
 
   const handleRefreshTelemetry = () => {
     setLoading(true);
@@ -164,6 +218,20 @@ export const Dashboard: React.FC = () => {
           >
             <Users className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
             Workforce Registry
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={handleQuickPunch}
+            disabled={stampLoading}
+            className={`text-xs font-semibold shadow-xs cursor-pointer ${
+              isCheckedInToday
+                ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 mr-1.5" />
+            {stampLoading ? 'Recording...' : isCheckedInToday ? 'Clock Out (Timestamp)' : '⚡ 1-Click Timestamp'}
           </Button>
         </div>
       </div>

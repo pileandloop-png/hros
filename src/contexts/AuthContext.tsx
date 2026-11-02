@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth, db, signInWithPhoneLast4 } from '../services/firebase';
 import { UserRole, UserProfile } from '../types/auth';
 
 interface AuthContextType {
@@ -23,6 +23,7 @@ interface AuthContextType {
   canViewCNIC: boolean;
   canMakeHiringDecisions: boolean;
   login: (e: string, p: string) => Promise<void>;
+  loginWithPhoneLast4: (last4: string) => Promise<{ user: any; person: any }>;
   logout: () => Promise<void>;
 }
 
@@ -80,6 +81,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithPhoneLast4 = async (last4: string) => {
+    setLoading(true);
+    try {
+      return await signInWithPhoneLast4(last4);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
@@ -119,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         canViewCNIC,
         canMakeHiringDecisions,
         login,
+        loginWithPhoneLast4,
         logout,
       }}
     >

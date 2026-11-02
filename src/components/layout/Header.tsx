@@ -18,6 +18,9 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useNavigate } from 'react-router-dom';
 import { CommandPaletteModal } from '../common/CommandPaletteModal';
+import { useToast } from '../../contexts/ToastContext';
+import { store } from '../../services/store';
+import { checkIn, checkOut } from '../../services/api';
 
 export const Header: React.FC = () => {
   const { user, profile, role, logout } = useAuth();
@@ -25,12 +28,69 @@ export const Header: React.FC = () => {
   const { isMobileOpen, toggleDrawer } = useNavigation();
   const navigate = useNavigate();
 
+  const { toast } = useToast();
   const [pktTime, setPktTime] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement));
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [stampLoading, setStampLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().split('T')[0];
+    const checkAttendance = () => {
+      const records = store.getCollection('attendance') || {};
+      const found = Object.values(records).find((r: any) =>
+        (r.userId === user.uid || r.userId === profile?.uid) && r.dateKey === today
+      );
+      if (found) {
+        setIsCheckedIn(found.status === 'CHECKED_IN');
+      } else {
+        setIsCheckedIn(false);
+      }
+    };
+    checkAttendance();
+    const unsub = store.subscribe((col) => {
+      if (col === 'attendance') checkAttendance();
+    });
+    return () => unsub();
+  }, [user, profile]);
+
+  const handleQuickTimestampPunch = async () => {
+    if (!user) return;
+    setStampLoading(true);
+    const nowPkt = new Date().toLocaleTimeString('en-US', {
+      timeZone: company.timezone || 'Asia/Karachi',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+    try {
+      if (!isCheckedIn) {
+        await checkIn('1-Click Header Timestamp Punch', undefined, {
+          uid: user.uid,
+          displayName: profile?.displayName || user.email || 'Team Member',
+          department: profile?.department,
+          role: profile?.role
+        });
+        toast.success(`Check-In Timestamp recorded: ${nowPkt} PKT!`);
+      } else {
+        await checkOut({
+          tasksCompleted: '1-Click Header Punch Out',
+          customUser: { uid: user.uid || 'usr-admin', displayName: profile?.displayName || user.email || 'Team Member' }
+        });
+        toast.info(`Check-Out Timestamp recorded: ${nowPkt} PKT!`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Timestamp punch failed');
+    } finally {
+      setStampLoading(false);
+    }
+  };
 
   // Sync fullscreen state
   useEffect(() => {
@@ -193,6 +253,22 @@ export const Header: React.FC = () => {
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{pktTime}</span>
           </div>
+
+          {/* 1-Click Timestamp Recorder Button */}
+          <button
+            type="button"
+            onClick={handleQuickTimestampPunch}
+            disabled={stampLoading}
+            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
+              isCheckedIn
+                ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+            title={isCheckedIn ? 'Click to record Check-Out timestamp in PKT' : 'Click to record Check-In timestamp in PKT'}
+          >
+            <span className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
+            <span>{stampLoading ? 'Recording...' : isCheckedIn ? '⏱️ Clock Out' : '⚡ 1-Click Timestamp'}</span>
+          </button>
 
           {/* Fullscreen Workspace Toggle */}
           <button

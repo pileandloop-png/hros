@@ -28,6 +28,7 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { MetricCard } from '../ui/MetricCard';
 import { store } from '../../services/store';
 import { checkIn, checkOut } from '../../services/api';
 
@@ -236,85 +237,75 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI 6-Metric Cards Grid */}
+      {/* Tremor-inspired SaaS KPI Metric Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        {/* Open Vacancies */}
-        <div
+        <MetricCard
+          title="Vacancies"
+          metric={metrics.activeVacancies}
+          subtitle="Open live positions"
+          icon={Briefcase}
+          iconColor="text-sky-600"
+          iconBg="bg-sky-50"
+          delta={{ value: '+2', type: 'increase', timeframe: 'this week' }}
           onClick={() => navigate('/recruitment/vacancies')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Vacancies</span>
-            <Briefcase className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">{metrics.activeVacancies}</p>
-          <span className="text-[10px] text-slate-400 font-medium">Open positions</span>
-        </div>
+        />
 
-        {/* Total Inbound Applications */}
-        <div
+        <MetricCard
+          title="Inbound Apps"
+          metric={metrics.totalApplications}
+          subtitle="Indeed & Email inbox"
+          icon={Users}
+          iconColor="text-indigo-600"
+          iconBg="bg-indigo-50"
+          delta={{ value: '+14%', type: 'increase', timeframe: 'vs last week' }}
           onClick={() => navigate('/recruitment/applications')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Inbound Apps</span>
-            <Users className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">{metrics.totalApplications}</p>
-          <span className="text-[10px] text-sky-600 font-medium">Indeed &amp; Email</span>
-        </div>
+        />
 
-        {/* Below Bachelor Filtered */}
-        <div
+        <MetricCard
+          title="Below Bachelor"
+          metric={metrics.belowBachelorFiltered}
+          subtitle="Auto-suppressed filter"
+          icon={ShieldAlert}
+          iconColor="text-amber-600"
+          iconBg="bg-amber-50"
+          delta={{ value: 'Suppressed', type: 'neutral' }}
+          badge="Policy"
           onClick={() => navigate('/inbox')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Below Bachelor</span>
-            <ShieldAlert className="w-4 h-4 text-amber-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-amber-600">{metrics.belowBachelorFiltered}</p>
-          <span className="text-[10px] text-amber-700 font-medium bg-amber-50 px-1.5 py-0.5 rounded">Auto-Suppressed</span>
-        </div>
+        />
 
-        {/* 5 Questions Dispatched */}
-        <div
+        <MetricCard
+          title="5 AI Questions"
+          metric={metrics.screeningQuestionsSent}
+          subtitle="Screenings active"
+          icon={Mail}
+          iconColor="text-blue-600"
+          iconBg="bg-blue-50"
+          delta={{ value: '+8 today', type: 'increase' }}
           onClick={() => navigate('/recruitment/pipeline')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">5 Questions</span>
-            <Mail className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">{metrics.screeningQuestionsSent}</p>
-          <span className="text-[10px] text-slate-400 font-medium">Screenings active</span>
-        </div>
+        />
 
-        {/* Interviews Hub */}
-        <div
+        <MetricCard
+          title="Interviews"
+          metric={metrics.interviewsScheduled}
+          subtitle="Cal.com & scorecards"
+          icon={Calendar}
+          iconColor="text-purple-600"
+          iconBg="bg-purple-50"
+          delta={{ value: '3 upcoming', type: 'neutral' }}
           onClick={() => navigate('/recruitment/interviews')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Interviews</span>
-            <Calendar className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">{metrics.interviewsScheduled}</p>
-          <span className="text-[10px] text-purple-600 font-medium">Scheduled &amp; Scorecard</span>
-        </div>
+        />
 
-        {/* Onboarding & Welcome Kit */}
-        <div
+        <MetricCard
+          title="Onboarding"
+          metric={metrics.onboardingActive}
+          subtitle="Docs & welcome guide"
+          icon={UserCheck}
+          iconColor="text-emerald-600"
+          iconBg="bg-emerald-50"
+          delta={{ value: '100% SLA', type: 'increase' }}
+          badge="Active"
           onClick={() => navigate('/onboarding')}
-          className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs hover:border-slate-300 transition-all cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Onboarding</span>
-            <UserCheck className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-          </div>
-          <p className="text-2xl font-extrabold text-emerald-600">{metrics.onboardingActive}</p>
-          <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded">Guide Dispatched</span>
-        </div>
+        />
       </div>
 
       {/* Main Operational 3-Column Grid */}

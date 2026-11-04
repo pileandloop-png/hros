@@ -8,6 +8,7 @@ import { Modal } from '../common/Modal';
 import { Calendar, Clock, Video, User, CheckCircle, XCircle, Plus, ExternalLink, Sparkles, Send } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { generateOfficialOnboardingGuideEmail } from '../../services/cvAnalysisService';
+import { ScheduleInterviewModal } from './ScheduleInterviewModal';
 
 export const InterviewsList: React.FC = () => {
   const { isSupervisor } = useAuth();
@@ -16,6 +17,7 @@ export const InterviewsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'TODAY' | 'COMPLETED' | 'NO_SHOW'>('UPCOMING');
   const [scorecardModalOpen, setScorecardModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<any>(null);
   const [scorecardData, setScorecardData] = useState({
     communication: 4,
@@ -135,20 +137,30 @@ export const InterviewsList: React.FC = () => {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Interviews Management</h2>
           <p className="text-xs text-slate-500 mt-0.5">Track candidate interviews, scorecards, and evaluations</p>
         </div>
-        <a
-          href="https://calendar.google.com/calendar/u/0/appointments/schedules/pileandloop"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors"
-        >
-          <span>Google Calendar Booking Link</span>
-          <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
-        </a>
+        <div className="flex items-center space-x-2">
+          <Button
+            size="sm"
+            onClick={() => setScheduleModalOpen(true)}
+            className="bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Schedule Interview (Cal.com Slots)
+          </Button>
+          <a
+            href="https://calendar.google.com/calendar/u/0/appointments/schedules/pileandloop"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-colors"
+          >
+            <span>Google Calendar</span>
+            <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+          </a>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -319,6 +331,18 @@ export const InterviewsList: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Cal.com inspired Interview Scheduling Modal */}
+      <ScheduleInterviewModal
+        isOpen={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        candidateName="Candidate"
+        candidateEmail=""
+        positionTitle="Engineering Intern"
+        onScheduled={() => {
+          loadInterviews();
+        }}
+      />
     </div>
   );
 };

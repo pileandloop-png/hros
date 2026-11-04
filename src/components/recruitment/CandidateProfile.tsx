@@ -30,6 +30,7 @@ import {
 import { InAppCvViewer } from './InAppCvViewer';
 import { InterviewScorecardModal } from './InterviewScorecardModal';
 import { OneClickInterviewModal } from './OneClickInterviewModal';
+import { ActivityTimeline, TimelineEvent } from '../ui/ActivityTimeline';
 
 export const CandidateProfile: React.FC = () => {
   const { candidateId } = useParams<{ candidateId: string }>();
@@ -213,6 +214,81 @@ export const CandidateProfile: React.FC = () => {
       setSendingEmail(false);
     }
   };
+
+  const handleQuickAddTimelineNote = async (content: string) => {
+    if (!content.trim() || !candidateId) return;
+    try {
+      await addDoc(collection(db, 'candidateNotes'), {
+        candidateId,
+        applicationId: selectedApp?.applicationId || null,
+        type: 'HR_NOTE',
+        content: content.trim(),
+        authorUid: user?.uid,
+        authorName: profile?.displayName || user?.email,
+        authorRole: profile?.role,
+        createdAt: serverTimestamp(),
+      });
+      const notesSnap = await getDocs(query(collection(db, 'candidateNotes'), where('candidateId', '==', candidateId), orderBy('createdAt', 'desc')));
+      setNotes(notesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch (err: any) {
+      alert(err?.message || 'Failed to post note');
+    }
+  };
+
+  // Twenty CRM & Plane inspired Timeline synthesis
+  const timelineEvents: TimelineEvent[] = [
+    ...applications.map((app) => ({
+      id: `app-${app.applicationId}`,
+      type: 'APPLICATION_CREATED' as const,
+      title: `Application Submitted: ${app.positionAppliedFor || 'Engineering Intern'}`,
+      description: `Inbound application received via ${app.source || 'Direct Portal'}. Initial stage: ${app.currentStage}.`,
+      actorName: candidate?.fullName || 'Candidate',
+      actorRole: 'Applicant',
+      timestamp: (app as any).appliedDate || (app as any).appliedAt || (app as any).createdAt || 'Recent',
+      badge: app.source || 'Inbound'
+    })),
+    ...stageHistory.map((hist) => ({
+      id: `hist-${hist.id}`,
+      type: hist.stage?.includes('SCREEN')
+        ? ('SCREENING_COMPLETED' as const)
+        : hist.stage?.includes('ONBOARD')
+        ? ('ONBOARDING_INITIATED' as const)
+        : ('APPLICATION_CREATED' as const),
+      title: `Stage Changed ? ${hist.stage?.replace(/_/g, ' ')}`,
+      description: hist.reason || 'Recruiter progressed application through recruitment pipeline.',
+      actorName: hist.changedByName || 'Recruitment Team',
+      actorRole: 'Recruiter',
+      timestamp: hist.changedAt?.toDate ? hist.changedAt.toDate().toLocaleString() : 'Recently'
+    })),
+    ...notes.map((n) => ({
+      id: `note-${n.id}`,
+      type: 'NOTE_ADDED' as const,
+      title: `Internal Recruiter Note (${n.type || 'HR_NOTE'})`,
+      description: n.content,
+      actorName: n.authorName || 'HR Team',
+      actorRole: n.authorRole || 'Recruiter',
+      timestamp: n.createdAt?.toDate ? n.createdAt.toDate().toLocaleString() : 'Recently'
+    })),
+    ...emailThreads.map((m) => ({
+      id: `email-${m.id}`,
+      type: 'EMAIL_SENT' as const,
+      title: `Email: ${m.subject || 'Automated Outreach'}`,
+      description: m.snippet || m.bodyText?.slice(0, 120) || 'Official recruitment email dispatched via cPanel SMTP.',
+      actorName: m.from || 'HR OS',
+      actorRole: 'cPanel Dispatch',
+      timestamp: m.sentAt?.toDate ? m.sentAt.toDate().toLocaleString() : 'Recently'
+    })),
+    ...interviews.map((int) => ({
+      id: `int-${int.id}`,
+      type: int.status === 'COMPLETED' ? ('INTERVIEW_PASSED' as const) : ('INTERVIEW_SCHEDULED' as const),
+      title: `Interview: ${int.interviewType || 'Technical Screening'}`,
+      description: `Scheduled for ${int.scheduledDate} at ${int.scheduledStart}. Platform: ${int.meetingPlatform || 'Google Meet'}. Status: ${int.status}`,
+      actorName: int.interviewerName || 'Pile & Loop Lead',
+      actorRole: 'Interviewer',
+      timestamp: int.scheduledDate || 'Upcoming',
+      badge: int.status
+    }))
+  ];
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500 text-xs">Loading 360? Candidate Profile...</div>;
@@ -523,6 +599,15 @@ export const CandidateProfile: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Twenty CRM & Plane inspired Chronological Activity Stream */}
+          <div className="pt-2">
+            <ActivityTimeline
+              events={timelineEvents}
+              onAddNote={handleQuickAddTimelineNote}
+              title="Recent Candidate Activities & Recruiter Notes"
+            />
+          </div>
         </div>
       )}
 
@@ -740,14 +825,12 @@ export const CandidateProfile: React.FC = () => {
         )}
 
         {activeTab === 'HISTORY' && (
-          <div className="space-y-3 text-xs">
-            <h3 className="text-sm font-bold text-slate-900">Stage History</h3>
-            {stageHistory.map((hist) => (
-              <div key={hist.id} className="p-2.5 bg-slate-50 rounded border">
-                <p className="font-semibold">{hist.stage}</p>
-                <span className="text-[11px] text-slate-500">{hist.reason}</span>
-              </div>
-            ))}
+          <div className="space-y-4">
+            <ActivityTimeline
+              events={timelineEvents}
+              onAddNote={handleQuickAddTimelineNote}
+              title="Full Historical Audit Stream & Stage Progression"
+            />
           </div>
         )}
 

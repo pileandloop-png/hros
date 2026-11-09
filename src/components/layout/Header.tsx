@@ -12,7 +12,8 @@ import {
   Maximize2,
   Minimize2,
   Command,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -248,6 +249,16 @@ export const Header: React.FC = () => {
 
         {/* Right Tools Area */}
         <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          {/* Enterprise Command Center Quick Link */}
+          <button
+            onClick={() => navigate('/enterprise')}
+            className="hidden xl:flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-sky-200 bg-sky-50/70 text-sky-800 hover:bg-sky-100 transition-colors cursor-pointer"
+            title="Click to open Enterprise Command Center"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
+            <span>Enterprise Tier</span>
+          </button>
+
           {/* Live Company Clock */}
           <div className="hidden lg:flex items-center space-x-1.5 text-xs font-mono font-medium text-slate-700 bg-slate-100/80 px-2.5 py-1.5 rounded-xl border border-slate-200/70">
             <Clock className="w-3.5 h-3.5 text-slate-400" />

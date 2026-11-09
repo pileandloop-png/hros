@@ -22,7 +22,9 @@ import {
   ExternalLink,
   Scan,
   DollarSign,
-  Key
+  Key,
+  Building2,
+  Cpu
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -88,6 +90,19 @@ export const Sidebar: React.FC = () => {
         { label: 'SaaS Plans & AI Quotas', path: '/settings?tab=billing' },
         { label: 'API Keys & Webhooks', path: '/settings?tab=api_keys' },
         { label: 'Security Audit Trail', path: '/audit' },
+      ],
+    },
+    {
+      label: 'Enterprise Suite',
+      icon: ShieldCheck,
+      children: [
+        { label: 'Command Center', path: '/enterprise' },
+        { label: 'Multi-Entity & Domains', path: '/enterprise?tab=tenants' },
+        { label: 'IAM, SAML 2.0 & RBAC', path: '/enterprise?tab=security_rbac' },
+        { label: 'Security & GDPR Scrub', path: '/enterprise?tab=compliance_gdpr' },
+        { label: 'Autonomous Mesh', path: '/enterprise?tab=autonomous_workers' },
+        { label: 'Executive SLA Analytics', path: '/enterprise?tab=executive_sla' },
+        { label: 'Verifiable Credentials', path: '/enterprise?tab=certificates' },
       ],
     },
     {

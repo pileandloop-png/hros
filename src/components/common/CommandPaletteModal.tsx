@@ -23,7 +23,8 @@ import {
   UserCheck,
   Award,
   BarChart3,
-  X
+  X,
+  Cpu
 } from 'lucide-react';
 import { collection, getDocs, query, limit } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -163,6 +164,29 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       icon: LayoutDashboard,
       action: () => {
         navigate('/');
+        onClose();
+      }
+    },
+    {
+      id: 'nav-enterprise',
+      title: 'Enterprise Command Center',
+      subtitle: 'Multi-entity tenants, SAML 2.0 / Okta IAM, and audit verification',
+      category: 'Navigation',
+      icon: ShieldCheck,
+      action: () => {
+        navigate('/enterprise');
+        onClose();
+      },
+      shortcut: 'E'
+    },
+    {
+      id: 'nav-enterprise-workers',
+      title: 'Autonomous Scraping Mesh',
+      subtitle: 'Monitor Playwright scraper, cPanel IMAP & webhook telemetry',
+      category: 'Navigation',
+      icon: Cpu,
+      action: () => {
+        navigate('/enterprise?tab=autonomous_workers');
         onClose();
       }
     },

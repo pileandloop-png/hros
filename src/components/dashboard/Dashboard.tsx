@@ -223,6 +223,16 @@ export const Dashboard: React.FC = () => {
 
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => navigate('/enterprise')}
+            className="text-xs font-semibold border-sky-200 bg-sky-50/50 text-sky-800 hover:bg-sky-100"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
+            Enterprise Command
+          </Button>
+
+          <Button
+            size="sm"
             onClick={handleQuickPunch}
             disabled={stampLoading}
             className={`text-xs font-semibold shadow-xs cursor-pointer ${

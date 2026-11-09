@@ -38,6 +38,7 @@ import { SettingsPage } from './components/settings/SettingsPage';
 import { CareersPage } from './components/careers/CareersPage';
 import { VerifyCertificate } from './components/verification/VerifyCertificate';
 import { AcceptInvitePage } from './components/auth/AcceptInvitePage';
+import { EnterpriseHub } from './components/enterprise/EnterpriseHub';
 
 export const App: React.FC = () => {
   return (
@@ -118,6 +119,14 @@ export const App: React.FC = () => {
                   <Route path="notifications" element={<NotificationCenter />} />
                   <Route path="audit" element={<ProtectedRoute requireHr><AuditLogPage /></ProtectedRoute>} />
                   <Route path="settings" element={<ProtectedRoute requireHr><SettingsPage /></ProtectedRoute>} />
+
+                  {/* Enterprise Command Center & Governance */}
+                  <Route path="enterprise" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
+                  <Route path="enterprise/tenants" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
+                  <Route path="enterprise/security" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
+                  <Route path="enterprise/compliance" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
+                  <Route path="enterprise/workers" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
+                  <Route path="enterprise/analytics" element={<ProtectedRoute requireHr><EnterpriseHub /></ProtectedRoute>} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

@@ -48,6 +48,7 @@ import {
 import { ComposeEmailModal } from './ComposeEmailModal';
 import { CreateFolderModal } from './CreateFolderModal';
 import { IndeedApplicationBanner } from './IndeedApplicationBanner';
+import { GlobalOutageSentinelBanner } from './GlobalOutageSentinelBanner';
 import { AiEmailLeaveBanner } from './AiEmailLeaveBanner';
 import { DeliverabilityCard } from '../email/DeliverabilityCard';
 import { InAppCvViewer } from '../recruitment/InAppCvViewer';
@@ -359,7 +360,11 @@ export const OutlookInbox: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+    <div className="space-y-4">
+      {/* Global Cloud Outage Sentinel & Direct-Line Mesh */}
+      <GlobalOutageSentinelBanner />
+
+      <div className="h-[calc(100vh-14rem)] min-h-[580px] flex bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
       {/* 1. LEFT PANE: Mailboxes, Folders, Custom Folders & Live 2s Pulse */}
       <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col justify-between p-3 select-none">
         <div className="space-y-3 overflow-y-auto scrollbar-thin">
@@ -910,6 +915,7 @@ export const OutlookInbox: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

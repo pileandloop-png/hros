@@ -1,5 +1,6 @@
 import { store } from './store';
 import { notifyDiscordAttendancePunch } from './discord';
+import { outageSentinel } from './outageSentinelService';
 import {
   generateDeliverabilityTelemetry,
   DeliverabilityTelemetry,
@@ -101,12 +102,26 @@ export async function sendHrEmail(data: {
   const now = new Date().toISOString();
   const telemetry = generateDeliverabilityTelemetry(data.to, data.subject, 'hr@pileandloop.com');
 
+  // Resolve Outage Sentinel Route (protects against Microsoft Outlook breakdowns)
+  const sentinelRoute = outageSentinel.resolveOutboundProvider();
+  outageSentinel.logProtectedDispatch(
+    data.to,
+    data.subject,
+    sentinelRoute.provider.id,
+    sentinelRoute.wasFailoverTriggered
+  );
+
   // Attempt to call Vercel Serverless /api/email if deployed
   try {
     const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'send', ...data })
+      body: JSON.stringify({
+        action: 'send',
+        ...data,
+        routedProvider: sentinelRoute.provider.id,
+        failoverTriggered: sentinelRoute.wasFailoverTriggered
+      })
     });
     if (res.ok) {
       const json = await res.json();

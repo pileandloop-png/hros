@@ -44,6 +44,7 @@ import {
   EnterpriseSlaRecord
 } from '../../services/enterpriseService';
 import { store } from '../../services/store';
+import { GlobalOutageSentinelBanner } from '../inbox/GlobalOutageSentinelBanner';
 
 export const EnterpriseHub: React.FC = () => {
   const { toast } = useToast();
@@ -648,6 +649,9 @@ export const EnterpriseHub: React.FC = () => {
       {/* TAB 4: Autonomous Scraping Mesh */}
       {activeTab === 'AUTONOMOUS_WORKERS' && (
         <div className="space-y-6">
+          {/* Global Outage Sentinel & Direct Line Failover Mesh */}
+          <GlobalOutageSentinelBanner />
+
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-900">Background Worker Telemetry &amp; Mesh Status</h3>

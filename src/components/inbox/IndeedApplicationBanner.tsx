@@ -36,6 +36,7 @@ import {
 import { useToast } from '../../contexts/ToastContext';
 import { sendHrEmail } from '../../services/api';
 import { store } from '../../services/store';
+import { appleHaptics } from '../../utils/appleHaptics';
 
 interface IndeedApplicationBannerProps {
   thread: EmailThread;
@@ -156,6 +157,9 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
         idempotencyKey: `auto_indeed_${Date.now()}_${candId}`
       });
 
+      // Play Apple Mail sent chime
+      appleHaptics.playSentChime();
+
       const timestampStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi' }) + ' PKT';
 
       // Update candidate in store
@@ -207,6 +211,7 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
       });
 
       setDispatchComplete(true);
+      appleHaptics.playSuccessChime();
       toast.success(`✅ Pipeline Complete! 5 Questions dispatched to ${details.candidateName} via SMTP and candidate record updated.`);
     } catch (err: any) {
       toast.error(err.message || 'Auto-pipeline failed');

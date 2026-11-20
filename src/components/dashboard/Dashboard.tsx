@@ -31,6 +31,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { MetricCard } from '../ui/MetricCard';
 import { store } from '../../services/store';
 import { checkIn, checkOut } from '../../services/api';
+import { appleHaptics } from '../../utils/appleHaptics';
 
 export const Dashboard: React.FC = () => {
   const { user, profile } = useAuth();
@@ -112,6 +113,17 @@ export const Dashboard: React.FC = () => {
 
   const handleQuickPunch = async () => {
     if (!user) return;
+    
+    // Apple Optimistic UI: flip state immediately in 0ms
+    const previousState = isCheckedInToday;
+    const nextState = !previousState;
+    setIsCheckedInToday(nextState);
+    if (nextState) {
+      appleHaptics.playSuccessChime();
+    } else {
+      appleHaptics.playClick();
+    }
+
     setStampLoading(true);
     const nowPkt = new Date().toLocaleTimeString('en-US', {
       timeZone: 'Asia/Karachi',
@@ -121,7 +133,7 @@ export const Dashboard: React.FC = () => {
       hour12: true
     });
     try {
-      if (!isCheckedInToday) {
+      if (nextState) {
         await checkIn('1-Click Dashboard Timestamp Punch', undefined, {
           uid: user.uid,
           displayName: profile?.displayName || user.email || 'Team Member',
@@ -137,6 +149,8 @@ export const Dashboard: React.FC = () => {
         toast.info(`Check-Out Timestamp recorded: ${nowPkt} PKT!`);
       }
     } catch (err: any) {
+      // Revert optimistic state on failure
+      setIsCheckedInToday(previousState);
       toast.error(err.message || 'Timestamp punch failed');
     } finally {
       setStampLoading(false);

@@ -75,6 +75,25 @@
     -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
 
+  /* Apple Spring Physics & Micro-Interaction Classes */
+  .apple-lift {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .apple-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 4px 10px -2px rgba(0, 0, 0, 0.02);
+  }
+  .apple-lift:active {
+    transform: translateY(0px) scale(0.99);
+  }
+
+  .apple-press {
+    transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .apple-press:active {
+    transform: scale(0.97);
+  }
+
   /* Safe Area Helpers for Modern Mobile Displays */
   .pb-safe {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));

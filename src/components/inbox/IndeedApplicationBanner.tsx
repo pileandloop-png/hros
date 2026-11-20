@@ -70,8 +70,15 @@ export const IndeedApplicationBanner: React.FC<IndeedApplicationBannerProps> = (
   const [autoStep, setAutoStep] = useState<string | null>(null);
   const [dispatchComplete, setDispatchComplete] = useState(false);
 
-  // If this thread is not an Indeed or application email, do not render banner
-  if (!details.isIndeed && thread.category !== 'New Application' && !thread.subject.toLowerCase().includes('application')) {
+  // If this thread is an employee leave request, it is NOT a recruitment candidate application
+  const isLeaveEmail = thread.category === 'Leave' || thread.subject.toLowerCase().includes('leave application') || thread.subject.toLowerCase().includes('leave request');
+  if (isLeaveEmail) {
+    return null;
+  }
+
+  // If this thread is not an Indeed or job applicant email, do not render banner
+  const isJobApplication = details.isIndeed || thread.category === 'New Application' || thread.subject.toLowerCase().includes('job application') || thread.subject.toLowerCase().includes('application for') || thread.subject.toLowerCase().includes('application:');
+  if (!isJobApplication) {
     return null;
   }
 

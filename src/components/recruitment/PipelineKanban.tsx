@@ -26,14 +26,14 @@ import {
   Calendar
 } from 'lucide-react';
 
-const KANBAN_STAGES: { key: ApplicationStage; title: string; color: string; badge: string }[] = [
-  { key: 'NEW_APPLICATION', title: '1. Inbound Ingested', color: 'border-sky-500', badge: 'Indeed / Web' },
-  { key: 'DISQUALIFIED', title: '2. Below Bachelor (Filtered)', color: 'border-amber-500', badge: 'Suppressed' },
-  { key: 'INITIAL_EMAIL_SENT', title: '3. 5 Questions Sent', color: 'border-blue-500', badge: 'Awaiting Reply' },
-  { key: 'SCREENING_RESPONSE_RECEIVED', title: '4. Candidate Replied', color: 'border-indigo-500', badge: 'AI Scored' },
-  { key: 'INTERVIEW_SCHEDULED', title: '5. Interview Scheduled', color: 'border-purple-500', badge: 'Google Meet' },
-  { key: 'ONBOARDING_APPROVED', title: '6. Interview Passed', color: 'border-teal-500', badge: 'Approved' },
-  { key: 'ONBOARDED', title: '7. Onboarding Active', color: 'border-emerald-500', badge: 'Guide Dispatched' },
+const KANBAN_STAGES: { key: ApplicationStage; title: string; dotColor: string; badge: string }[] = [
+  { key: 'NEW_APPLICATION', title: '1. Inbound Ingested', dotColor: 'bg-sky-500', badge: 'Indeed / Web' },
+  { key: 'DISQUALIFIED', title: '2. Below Bachelor (Filtered)', dotColor: 'bg-amber-500', badge: 'Suppressed' },
+  { key: 'INITIAL_EMAIL_SENT', title: '3. 5 Questions Sent', dotColor: 'bg-blue-500', badge: 'Awaiting Reply' },
+  { key: 'SCREENING_RESPONSE_RECEIVED', title: '4. Candidate Replied', dotColor: 'bg-indigo-500', badge: 'AI Scored' },
+  { key: 'INTERVIEW_SCHEDULED', title: '5. Interview Scheduled', dotColor: 'bg-purple-500', badge: 'Google Meet' },
+  { key: 'ONBOARDING_APPROVED', title: '6. Interview Passed', dotColor: 'bg-teal-500', badge: 'Approved' },
+  { key: 'ONBOARDED', title: '7. Onboarding Active', dotColor: 'bg-emerald-500', badge: 'Guide Dispatched' },
 ];
 
 export const PipelineKanban: React.FC = () => {
@@ -172,19 +172,22 @@ export const PipelineKanban: React.FC = () => {
       </div>
 
       {/* Kanban Board Container */}
-      <div className="flex-1 overflow-x-auto pb-4">
+      <div className="flex-1 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200">
         <div className="flex space-x-4 min-w-max h-full">
           {KANBAN_STAGES.map((col) => {
             const colApps = filteredApps.filter(a => a.currentStage === col.key);
             return (
               <div
                 key={col.key}
-                className="w-72 bg-slate-100/70 rounded-xl border border-slate-200 flex flex-col max-h-[calc(100vh-12rem)] shadow-2xs"
+                className="w-72 bg-slate-50/80 rounded-2xl border border-slate-200/80 flex flex-col max-h-[calc(100vh-12rem)] shadow-2xs overflow-hidden"
               >
                 {/* Column Header */}
-                <div className={`p-3.5 border-t-4 ${col.color} bg-white rounded-t-xl border-b border-slate-200 flex items-center justify-between`}>
-                  <h4 className="text-xs font-bold text-slate-800 tracking-tight">{col.title}</h4>
-                  <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold flex items-center justify-center">
+                <div className="p-3 bg-white/90 backdrop-blur-md border-b border-slate-200/70 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                    <h4 className="text-xs font-bold text-slate-800 tracking-tight">{col.title}</h4>
+                  </div>
+                  <span className="min-w-5 h-5 px-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold font-mono flex items-center justify-center">
                     {colApps.length}
                   </span>
                 </div>
@@ -194,7 +197,7 @@ export const PipelineKanban: React.FC = () => {
                   {colApps.map((app) => (
                     <div
                       key={app.applicationId}
-                      className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs hover:shadow-xs transition-shadow space-y-2"
+                      className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-xs hover:border-slate-300 transition-all space-y-2"
                     >
                       <div className="flex items-start justify-between">
                         <h5

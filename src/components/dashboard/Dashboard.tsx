@@ -168,82 +168,72 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Launch Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
+        {/* Apple HIG Harmonized Action Center */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Segmented Quick Nav Bar */}
+          <div className="inline-flex items-center p-1 rounded-xl bg-slate-100/80 border border-slate-200/70 text-xs">
+            <button
+              onClick={() => navigate('/inbox')}
+              className="px-2.5 py-1.5 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-white/80 transition-all font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Mail className="w-3.5 h-3.5 text-slate-500" />
+              <span>Inbox</span>
+            </button>
+            <button
+              onClick={() => navigate('/recruitment/pipeline')}
+              className="px-2.5 py-1.5 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-white/80 transition-all font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <TrendingUp className="w-3.5 h-3.5 text-slate-500" />
+              <span>Pipeline</span>
+            </button>
+            <button
+              onClick={() => navigate('/workforce')}
+              className="px-2.5 py-1.5 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-white/80 transition-all font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Users className="w-3.5 h-3.5 text-slate-500" />
+              <span>Workforce</span>
+            </button>
+            <button
+              onClick={() => navigate('/enterprise')}
+              className="px-2.5 py-1.5 rounded-lg text-slate-700 hover:text-slate-900 hover:bg-white/80 transition-all font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+              <span>Enterprise</span>
+            </button>
+          </div>
+
+          {/* Utility Sync Action */}
+          <button
             onClick={handleRefreshTelemetry}
-            className="text-xs font-semibold"
             disabled={loading}
+            title="Refresh ATS Telemetry"
+            className="p-2 rounded-xl border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            Sync Now
-          </Button>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
 
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => navigate('/browser-agent')}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs"
-          >
-            <Globe className="w-3.5 h-3.5 mr-1.5" />
-            Run Browser Agent
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/inbox')}
-            className="text-xs font-semibold border-slate-200 hover:bg-slate-50"
-          >
-            <Mail className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
-            Inbound Inbox
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/recruitment/pipeline')}
-            className="text-xs font-semibold border-slate-200 hover:bg-slate-50"
-          >
-            <TrendingUp className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
-            Pipeline Kanban
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/workforce')}
-            className="text-xs font-semibold border-indigo-200 bg-indigo-50/40 text-indigo-700 hover:bg-indigo-50"
-          >
-            <Users className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
-            Workforce Registry
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/enterprise')}
-            className="text-xs font-semibold border-sky-200 bg-sky-50/50 text-sky-800 hover:bg-sky-100"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-sky-600" />
-            Enterprise Command
-          </Button>
-
-          <Button
-            size="sm"
+          {/* Quick Timestamp Punch Capsule */}
+          <button
             onClick={handleQuickPunch}
             disabled={stampLoading}
-            className={`text-xs font-semibold shadow-xs cursor-pointer ${
+            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs border ${
               isCheckedInToday
-                ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                ? 'bg-amber-50 text-amber-800 border-amber-200/90 hover:bg-amber-100'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200/90 hover:bg-emerald-100'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 mr-1.5" />
-            {stampLoading ? 'Recording...' : isCheckedInToday ? 'Clock Out (Timestamp)' : '⚡ 1-Click Timestamp'}
-          </Button>
+            <Clock className={`w-3.5 h-3.5 ${isCheckedInToday ? 'text-amber-600' : 'text-emerald-600'}`} />
+            <span>{stampLoading ? 'Recording...' : isCheckedInToday ? 'Clock Out' : '1-Click Punch'}</span>
+          </button>
+
+          {/* Primary Action Button (The "One Main Thing") */}
+          <button
+            onClick={() => navigate('/browser-agent')}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-all cursor-pointer shadow-2xs"
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Run Browser Agent</span>
+          </button>
         </div>
       </div>
 

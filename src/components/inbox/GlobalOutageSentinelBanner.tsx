@@ -13,7 +13,9 @@ import {
   Info,
   Clock,
   Send,
-  Layers
+  Layers,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
@@ -33,6 +35,7 @@ export const GlobalOutageSentinelBanner: React.FC = () => {
   const [bufferQueue, setBufferQueue] = useState<OutageBufferItem[]>(outageSentinel.getBufferQueue());
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isPingLoading, setIsPingLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     setProviders(outageSentinel.getProviders());
@@ -94,111 +97,121 @@ export const GlobalOutageSentinelBanner: React.FC = () => {
 
           {/* Action Bar */}
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 border border-slate-200/60 transition-all cursor-pointer"
+            >
+              <span>{isExpanded ? 'Hide Telemetry' : 'View Telemetry Mesh'}</span>
+              {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+            </button>
+
             <Button
               size="sm"
               variant="outline"
               onClick={handleRefreshPing}
               disabled={isPingLoading}
-              className="text-xs font-semibold"
+              className="text-xs font-medium bg-white border-slate-200 hover:bg-slate-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isPingLoading ? 'animate-spin' : ''}`} />
-              Ping Cloud Providers
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-slate-500 ${isPingLoading ? 'animate-spin' : ''}`} />
+              Ping Mesh
             </Button>
 
             <button
               onClick={handleToggleForcedDirect}
-              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
                 config.forcedDirectLineMode
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>{config.forcedDirectLineMode ? 'Sovereign Direct Mode (Active)' : 'Enable Direct Line'}</span>
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <span>{config.forcedDirectLineMode ? 'Sovereign Direct (Active)' : 'Direct-Line Mode'}</span>
             </button>
 
             <Button
               size="sm"
               variant="outline"
               onClick={() => setIsDetailsModalOpen(true)}
-              className="text-xs font-semibold border-amber-200 bg-amber-50/50 text-amber-900 hover:bg-amber-100"
+              className="text-xs font-medium border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             >
-              <Layers className="w-3.5 h-3.5 mr-1" />
-              Telemetry &amp; Buffer ({bufferQueue.length})
+              <Layers className="w-3.5 h-3.5 mr-1 text-slate-500" />
+              Buffer ({bufferQueue.length})
             </Button>
           </div>
         </div>
 
-        {/* Live Provider Health Bar Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 text-xs">
-          {/* Microsoft 365 Status Card */}
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700">Microsoft 365 (Outlook)</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
-                {m365?.status}
+        {/* Live Provider Health Bar Grid (Progressive Disclosure) */}
+        {isExpanded && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-slate-100 text-xs animate-in fade-in duration-200">
+            {/* Microsoft 365 Status Card */}
+            <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-700">Microsoft 365 (Outlook)</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                  {m365?.status}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Latency: <strong className="text-amber-800">{m365?.latencyMs}ms</strong></span>
+                <span>Uptime: {m365?.uptime30Days}%</span>
+              </div>
+              <span className="text-[10px] text-rose-600 block truncate font-medium">
+                ⚠️ Major Cloud Latency / Rate Limits
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-              <span>Latency: <strong className="text-amber-700">{m365?.latencyMs}ms</strong></span>
-              <span>Uptime: {m365?.uptime30Days}%</span>
-            </div>
-            <span className="text-[10px] text-rose-600 block truncate font-medium">
-              ⚠️ Major Cloud Latency / Rate Limits
-            </span>
-          </div>
 
-          {/* Dedicated Direct Pipe Card */}
-          <div className="p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-200 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-950">Pile &amp; Loop Direct-Line</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-600 text-white">
-                ACTIVE RELAY
+            {/* Dedicated Direct Pipe Card */}
+            <div className="p-3 rounded-xl bg-emerald-50/40 border border-emerald-200/80 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-950">Pile &amp; Loop Direct-Line</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                  ACTIVE RELAY
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-emerald-800 font-mono">
+                <span>Latency: <strong>{directPipe?.latencyMs}ms</strong></span>
+                <span>SLA: {directPipe?.uptime30Days}%</span>
+              </div>
+              <span className="text-[10px] text-emerald-700 block truncate font-medium">
+                ✓ Sovereign cPanel TLS (Zero-Downtime)
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-emerald-800 font-mono">
-              <span>Latency: <strong>{directPipe?.latencyMs}ms</strong></span>
-              <span>SLA: {directPipe?.uptime30Days}%</span>
-            </div>
-            <span className="text-[10px] text-emerald-700 block truncate font-medium">
-              ✓ Sovereign cPanel TLS (Zero-Downtime)
-            </span>
-          </div>
 
-          {/* Google Workspace */}
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700">Google Workspace</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                OPERATIONAL
+            {/* Google Workspace */}
+            <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-700">Google Workspace</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900">
+                  OPERATIONAL
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Latency: 145ms</span>
+                <span>Uptime: 99.91%</span>
+              </div>
+              <span className="text-[10px] text-slate-500 block truncate">
+                Secondary Hot Standby
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-              <span>Latency: 145ms</span>
-              <span>Uptime: 99.91%</span>
-            </div>
-            <span className="text-[10px] text-slate-500 block truncate">
-              Secondary Hot Standby
-            </span>
-          </div>
 
-          {/* Candidate Direct Portal Ingestion */}
-          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700">Direct ATS Web Ingestion</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-sky-100 text-sky-800">
-                INDEPENDENT
+            {/* Candidate Direct Portal Ingestion */}
+            <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-700">Direct ATS Web Ingestion</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-900">
+                  INDEPENDENT
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Public Careers: 100%</span>
+                <span>Scraper: Ready</span>
+              </div>
+              <span className="text-[10px] text-sky-700 block truncate font-medium">
+                ✓ Direct to Database (No Email Dependency)
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-              <span>Public Careers: 100%</span>
-              <span>Scraper: Ready</span>
-            </div>
-            <span className="text-[10px] text-sky-700 block truncate font-medium">
-              ✓ Direct to Database (No Email Dependency)
-            </span>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modal: Deep Architecture & Outage Resilience Telemetry */}

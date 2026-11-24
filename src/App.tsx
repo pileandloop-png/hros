@@ -39,6 +39,7 @@ import { CareersPage } from './components/careers/CareersPage';
 import { VerifyCertificate } from './components/verification/VerifyCertificate';
 import { AcceptInvitePage } from './components/auth/AcceptInvitePage';
 import { EnterpriseHub } from './components/enterprise/EnterpriseHub';
+import { LearningAcademyHub } from './components/learning/LearningAcademyHub';
 
 export const App: React.FC = () => {
   return (
@@ -81,9 +82,13 @@ export const App: React.FC = () => {
                   <Route path="inbox/sent" element={<ProtectedRoute requireHr><OutlookInbox /></ProtectedRoute>} />
                   <Route path="inbox/templates" element={<ProtectedRoute requireHr><EmailTemplates /></ProtectedRoute>} />
 
-                  {/* Onboarding (HR Only) */}
+                  {/* Onboarding & Learning Academy */}
                   <Route path="onboarding" element={<ProtectedRoute requireHr><OnboardingList /></ProtectedRoute>} />
                   <Route path="onboarding/documents" element={<ProtectedRoute requireHr><OnboardingList /></ProtectedRoute>} />
+                  <Route path="learning" element={<LearningAcademyHub />} />
+                  <Route path="learning/courses" element={<LearningAcademyHub />} />
+                  <Route path="learning/certificates" element={<LearningAcademyHub />} />
+                  <Route path="academy" element={<LearningAcademyHub />} />
 
                   {/* People & Workforce Lifecycle */}
                   <Route path="workforce" element={<ProtectedRoute requireHr><WorkforceRegistry /></ProtectedRoute>} />

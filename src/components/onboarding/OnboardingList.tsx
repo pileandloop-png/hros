@@ -18,9 +18,12 @@ import {
   Eye,
   Lock,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  GraduationCap,
+  Send
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { store } from '../../services/store';
 
 export const OnboardingList: React.FC = () => {
   const { isSupervisor, canViewCNIC } = useAuth();
@@ -41,18 +44,26 @@ export const OnboardingList: React.FC = () => {
   const loadOnboardingCases = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'onboardingCases'));
-      const list = [];
-      for (const d of snap.docs) {
-        const cData = d.data();
-        let candidateName = 'New Joiner';
-        if (cData.candidateId) {
-          const candSnap = await getDoc(doc(db, 'candidates', cData.candidateId));
-          if (candSnap.exists()) candidateName = candSnap.data()?.fullName || candidateName;
+      const snap = await getDocs(collection(db, 'onboardingCases')).catch(() => null);
+      let list: any[] = [];
+      if (snap && snap.docs.length > 0) {
+        for (const d of snap.docs) {
+          const cData = d.data();
+          let candidateName = 'New Joiner';
+          if (cData.candidateId) {
+            const candSnap = await getDoc(doc(db, 'candidates', cData.candidateId)).catch(() => null);
+            if (candSnap?.exists()) candidateName = candSnap.data()?.fullName || candidateName;
+          }
+          list.push({ id: d.id, candidateName, ...cData });
         }
-        list.push({ id: d.id, candidateName, ...cData });
+      } else {
+        const rawStore = store.getCollection('onboardingCases') || {};
+        list = Object.values(rawStore);
       }
       setCases(list);
+    } catch {
+      const rawStore = store.getCollection('onboardingCases') || {};
+      setCases(Object.values(rawStore));
     } finally {
       setLoading(false);
     }
@@ -159,8 +170,19 @@ export const OnboardingList: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
                     <Badge variant={c.status === 'COMPLETED' ? 'success' : 'warning'}>{c.status}</Badge>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate('/learning')}
+                      className="text-xs font-semibold border-sky-200 text-sky-800 bg-sky-50/60 hover:bg-sky-100"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 mr-1 text-sky-600" />
+                      Push to Learn
+                    </Button>
+
                     {isSupervisor && c.status !== 'COMPLETED' && (
                       <Button
                         size="sm"

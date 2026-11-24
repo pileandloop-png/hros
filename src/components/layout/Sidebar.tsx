@@ -24,7 +24,8 @@ import {
   DollarSign,
   Key,
   Building2,
-  Cpu
+  Cpu,
+  GraduationCap
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -59,11 +60,13 @@ export const Sidebar: React.FC = () => {
       ],
     },
     {
-      label: 'Onboarding & Guide',
+      label: 'Onboarding & Academy',
       icon: UserCheck,
       children: [
         { label: 'Active Onboarding Cases', path: '/onboarding' },
         { label: 'Document Review', path: '/onboarding/documents' },
+        { label: 'Learning Academy & LMS', path: '/learning' },
+        { label: 'Course Certifications', path: '/learning/certificates' },
       ],
     },
     {
@@ -118,6 +121,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Pipeline Kanban', path: '/recruitment/pipeline', icon: Briefcase },
     { label: 'Browser Agent', path: '/browser-agent', icon: Scan },
     { label: 'Onboarding Cases', path: '/onboarding', icon: UserCheck },
+    { label: 'Learning Academy', path: '/learning', icon: GraduationCap },
   ];
 
   const navItems = isTeamMemberOnly ? teamNav : hrNav;

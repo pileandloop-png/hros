@@ -1059,5 +1059,174 @@ React, TypeScript, Node.js, Express, PostgreSQL, MongoDB, Git, REST APIs`,
       createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
       updatedAt: new Date(Date.now() - 1 * 86400000).toISOString()
     }
+  },
+  courses: {
+    "course-1": {
+      id: "course-1",
+      title: "Full-Stack Web Engineering FastTrack",
+      subtitle: "React 19, TypeScript, Tailwind CSS & High-Performance Node.js",
+      description: "Comprehensive engineering curriculum for new joiners and interns covering clean code architecture, atomic design components, state management, and real-time WebSockets.",
+      category: "Engineering",
+      level: "Intermediate",
+      duration: "6 Hours (8 Modules)",
+      instructor: "Senior Principal Architect",
+      externalAppUrl: "https://learn.pileandloop.com/tracks/fullstack-react",
+      tags: ["React", "TypeScript", "Node.js", "Tailwind"],
+      enrolledCount: 5,
+      completedCount: 2,
+      featured: true,
+      publishedDate: new Date(Date.now() - 20 * 86400000).toISOString(),
+      syllabus: [
+        { title: "Module 1: Modern TypeScript & Type Safety in Enterprise Apps", duration: "45m", summary: "Generics, utility types, discriminating unions, and strict null checks." },
+        { title: "Module 2: React 18/19 Architecture & State Modeling", duration: "55m", summary: "Component lifecycle, custom hooks, reducer patterns, and context isolation." },
+        { title: "Module 3: Tailwind CSS & Apple Human Interface Guidelines", duration: "40m", summary: "Color tokens, typography scale, squircles, and responsive layouts." },
+        { title: "Module 4: API Integration, Error Boundaries & Optimistic UI", duration: "50m", summary: "Zero-latency UI updates, rollback mechanisms, and resilient network retries." },
+        { title: "Module 5: Scalable Node.js Backend & Persistent State Stores", duration: "60m", summary: "Building structured REST APIs, cPanel SMTP relays, and schema validation." }
+      ]
+    },
+    "course-2": {
+      id: "course-2",
+      title: "Autonomous Web Scraping & Playwright Masterclass",
+      subtitle: "Headless Chromium, Anti-Bot Avoidance & Structured Resume Parsing",
+      description: "Learn the architecture powering Pile & Loop's Browser Agent. Covers browser automation, selector strategies, session caching, and AI-driven CV extraction.",
+      category: "Recruitment & AI",
+      level: "Advanced",
+      duration: "4.5 Hours (6 Modules)",
+      instructor: "AI & Automation Lead",
+      externalAppUrl: "https://learn.pileandloop.com/tracks/playwright-agent",
+      tags: ["Playwright", "Headless Chrome", "AI", "CV Parsing"],
+      enrolledCount: 4,
+      completedCount: 1,
+      featured: true,
+      publishedDate: new Date(Date.now() - 15 * 86400000).toISOString(),
+      syllabus: [
+        { title: "Module 1: Headless Browser Foundations & Chromium Architecture", duration: "40m", summary: "Virtual viewports, user-agent spoofing, and headless DOM navigation." },
+        { title: "Module 2: Indeed & LinkedIn Dynamic DOM Traversal", duration: "50m", summary: "CSS selector fallback chains, wait states, and iframe extraction." },
+        { title: "Module 3: Anti-Bot Avoidance & Stealth Automation", duration: "45m", summary: "Handling human-like mouse jitters, scroll momentum, and rate limiting." },
+        { title: "Module 4: PDF & DOCX Resume Text Extraction via NLP", duration: "60m", summary: "Parsing education degrees, graduation dates, and below-bachelor markers." }
+      ]
+    },
+    "course-3": {
+      id: "course-3",
+      title: "Cybersecurity, GDPR Compliance & CNIC Data Protection",
+      subtitle: "PII Security, Dynamic Watermarking & Enterprise Audit Logging",
+      description: "Mandatory security onboarding course for all team members. Learn how we handle candidate national identity cards (CNIC), encrypt local telemetry, and maintain zero data leakage.",
+      category: "Compliance & Security",
+      level: "Beginner",
+      duration: "2 Hours (4 Modules)",
+      instructor: "Compliance & Security Officer",
+      externalAppUrl: "https://learn.pileandloop.com/tracks/security-gdpr",
+      tags: ["Security", "GDPR", "CNIC Protection", "Audit Trail"],
+      enrolledCount: 8,
+      completedCount: 6,
+      featured: false,
+      publishedDate: new Date(Date.now() - 30 * 86400000).toISOString(),
+      syllabus: [
+        { title: "Module 1: PII Data Privacy & Global Compliance Standards", duration: "30m", summary: "GDPR principles, data subject rights, and zero-trust data access." },
+        { title: "Module 2: National Identity Card (CNIC) Watermarking Protocol", duration: "35m", summary: "Why and how all identity docs receive dynamic recruiter-stamped watermarks." },
+        { title: "Module 3: Enterprise Audit Trails & Role-Based Access Control", duration: "25m", summary: "Tracking all data views, exports, and document review status updates." }
+      ]
+    },
+    "course-4": {
+      id: "course-4",
+      title: "UI/UX Design Systems & Apple HIG Foundations",
+      subtitle: "Figma Component Architectures, Visual Calm & Micro-Interactions",
+      description: "Designed for UI/UX interns and frontend developers. Master Steve Jobs' and Dieter Rams' principles of visual calm, progressive disclosure, and continuous squircle curvature.",
+      category: "Design & UX",
+      level: "Intermediate",
+      duration: "3 Hours (5 Modules)",
+      instructor: "Design Systems Lead",
+      externalAppUrl: "https://learn.pileandloop.com/tracks/apple-hig-design",
+      tags: ["Figma", "Apple HIG", "Design Systems", "Micro-Interactions"],
+      enrolledCount: 3,
+      completedCount: 1,
+      featured: false,
+      publishedDate: new Date(Date.now() - 10 * 86400000).toISOString(),
+      syllabus: [
+        { title: "Module 1: The Core Tenets of Apple Human Interface Guidelines", duration: "35m", summary: "Steve Jobs' philosophy: Design is how it works. Dieter Rams' 10 principles." },
+        { title: "Module 2: Squircles, Visual Calm & Progressive Disclosure", duration: "40m", summary: "Eliminating button soup, continuous corner radius, and subtle elevation." },
+        { title: "Module 3: Acoustic Haptics & Fluid Spring Transitions", duration: "35m", summary: "Applying Web Audio feedback and cubic-bezier curves for tactile responsiveness." }
+      ]
+    },
+    "course-5": {
+      id: "course-5",
+      title: "Pile & Loop Culture & New Joiner Onboarding Handbook",
+      subtitle: "Our Mission, Daily Syncs, Slack Norms & Punctuality Expectations",
+      description: "The essential guide for your first 30 days. Covers company operating principles, stipend cycles, biometric attendance rules, and mentorship tracks.",
+      category: "Onboarding Core",
+      level: "Beginner",
+      duration: "1.5 Hours (3 Modules)",
+      instructor: "Head of People & Culture",
+      externalAppUrl: "https://learn.pileandloop.com/tracks/onboarding-handbook",
+      tags: ["Onboarding", "Culture", "Handbook", "Punctuality"],
+      enrolledCount: 12,
+      completedCount: 9,
+      featured: true,
+      publishedDate: new Date(Date.now() - 40 * 86400000).toISOString(),
+      syllabus: [
+        { title: "Module 1: Welcome to Pile & Loop - Our Purpose & Values", duration: "25m", summary: "How we build high-impact autonomous talent systems and our quality culture." },
+        { title: "Module 2: Daily Operations, Biometric Timestamps & Leave Rules", duration: "35m", summary: "Understanding 09:00 - 16:00 PKT shifts, 1-click attendance, and stipend disbursement." },
+        { title: "Module 3: Communication Etiquette & Internship Milestones", duration: "30m", summary: "Weekly check-ins, mentor guidance, and performance evaluation criteria." }
+      ]
+    }
+  },
+  courseEnrollments: {
+    "enroll-saad-1": {
+      id: "enroll-saad-1",
+      courseId: "course-1",
+      courseTitle: "Full-Stack Web Engineering FastTrack",
+      userId: "usr-saad",
+      userName: "Saad Qureshi",
+      userEmail: "saad.qureshi@example.com",
+      role: "Software Engineering Intern",
+      progressPercent: 65,
+      status: "IN_PROGRESS",
+      assignedDate: new Date(Date.now() - 10 * 86400000).toISOString(),
+      pushedBy: "hr@pileandloop.com",
+      lastPushedAt: new Date(Date.now() - 2 * 86400000).toISOString()
+    },
+    "enroll-ayesha-1": {
+      id: "enroll-ayesha-1",
+      courseId: "course-4",
+      courseTitle: "UI/UX Design Systems & Apple HIG Foundations",
+      userId: "usr-ayesha",
+      userName: "Ayesha Siddiqui",
+      userEmail: "ayesha.siddiqui@example.com",
+      role: "UI/UX Design Intern",
+      progressPercent: 90,
+      status: "IN_PROGRESS",
+      assignedDate: new Date(Date.now() - 6 * 86400000).toISOString(),
+      pushedBy: "hr@pileandloop.com",
+      lastPushedAt: new Date(Date.now() - 1 * 86400000).toISOString()
+    },
+    "enroll-usman-1": {
+      id: "enroll-usman-1",
+      courseId: "course-2",
+      courseTitle: "Autonomous Web Scraping & Playwright Masterclass",
+      userId: "usr-usman",
+      userName: "Muhammad Usman",
+      userEmail: "m.usman.dev@example.com",
+      role: "Junior Web Developer",
+      progressPercent: 30,
+      status: "IN_PROGRESS",
+      assignedDate: new Date(Date.now() - 4 * 86400000).toISOString(),
+      pushedBy: "hr@pileandloop.com"
+    },
+    "enroll-sara-1": {
+      id: "enroll-sara-1",
+      courseId: "course-3",
+      courseTitle: "Cybersecurity, GDPR Compliance & CNIC Data Protection",
+      userId: "usr-sara",
+      userName: "Sara Ahmed",
+      userEmail: "sara.ahmed@example.com",
+      role: "HR Executive",
+      progressPercent: 100,
+      status: "COMPLETED",
+      assignedDate: new Date(Date.now() - 12 * 86400000).toISOString(),
+      completedDate: new Date(Date.now() - 3 * 86400000).toISOString(),
+      pushedBy: "hr@pileandloop.com",
+      certificateId: "CERT-SEC-8921",
+      certificateUrl: "/verify/CERT-SEC-8921"
+    }
   }
 };

@@ -27,7 +27,9 @@ import {
   Sparkles,
   Filter,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { store } from '../../services/store';
 import { useAuth } from '../../contexts/AuthContext';
@@ -207,6 +209,20 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       shortcut: 'C'
     },
     {
+      id: 'action-academy',
+      title: 'Open Training Academy & Courses',
+      subtitle: 'Assign course tracks, configure app lines & push learning invitations',
+      category: 'Quick Actions',
+      icon: GraduationCap,
+      action: () => {
+        navigate('/learning');
+        onClose();
+      },
+      shortcut: 'L',
+      tag: 'Academy',
+      tagColor: 'bg-violet-100 text-violet-800'
+    },
+    {
       id: 'action-fullscreen',
       title: 'Toggle Fullscreen Mode',
       subtitle: 'Maximize workspace edge-to-edge for monitor displays',
@@ -333,6 +349,29 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         onClose();
       },
       shortcut: 'D'
+    },
+    {
+      id: 'nav-onboarding',
+      title: 'Onboarding & Document Verification',
+      subtitle: 'Active joiners, CNIC watermarks & access provisioning checklist',
+      category: 'Navigation',
+      icon: UserPlus,
+      action: () => {
+        navigate('/onboarding');
+        onClose();
+      }
+    },
+    {
+      id: 'nav-learning',
+      title: 'Training Academy & Courses',
+      subtitle: 'Course catalog, enrolled progress radar, and verifiable credentials',
+      category: 'Navigation',
+      icon: GraduationCap,
+      action: () => {
+        navigate('/learning');
+        onClose();
+      },
+      shortcut: 'L'
     },
     {
       id: 'nav-workforce',
